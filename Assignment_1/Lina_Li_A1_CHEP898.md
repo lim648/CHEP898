@@ -375,30 +375,30 @@ prop.table(table_pa)
 
 ## Identify trends or anomalies based on these statistics.
 
-- Fruit and Vegetable Consumption (`fruit_veg_tot`)\
-  - The mean is 4.815 and median is 4, they are both close to **4**, indicating a relatively symmetric distribution.\
-  - The mode is also **4**, reinforcing that most participants consume about **4 servings** of fruits and vegetables daily.\
+- Fruit and Vegetable Consumption (`fruit_veg_tot`)
+  - The mean is 4.815 and median is 4, they are both close to **4**, indicating a relatively symmetric distribution.
+  - The mode is also **4**, reinforcing that most participants consume about **4 servings** of fruits and vegetables daily.
   - A variance of **6.96** suggests a moderate spread in the data, indicating that some participants consume either significantly less or more than the average.
 
-- Physical Activity (`PA_TOTAL_SHORT`)\
-  - The mean physical activity level is **2574.089**, which is much higher than the median (**1782**), suggesting the data may be positively skewed.\
-  - The large standard deviation (**2656.19**) indicates a wide variability in activity levels.\
+- Physical Activity (`PA_TOTAL_SHORT`)
+  - The mean physical activity level is **2574.089**, which is much higher than the median (**1782**), suggesting the data may be positively skewed.
+  - The large standard deviation (**2656.19**) indicates a wide variability in activity levels.
   - Outliers with extremely high physical activity levels should be reviewed for potential data entry errors or unique characteristics.
 
-- Gender Distribution (`gender_recode`)\
-  - Females make up **63%** of the sample, while males account for **37%**.\
+- Gender Distribution (`gender_recode`)
+  - Females make up **63%** of the sample, while males account for **37%**.
   - The gender imbalance could introduce bias in analyses related to physical activity or income.
 
-- Income Distribution (`income_recode`)\
-  - A significant proportion (**~43%**) of participants fall into mid-income categories (`$25,000 - $99,999`), while very low (`< $10,000`) and very high income (`> $200,000`) categories are underrepresented.\
+- Income Distribution (`income_recode`)
+  - A significant proportion (**~43%**) of participants fall into mid-income categories (`$25,000 - $99,999`), while very low (`< $10,000`) and very high income (`> $200,000`) categories are underrepresented.
   - Limited representation in extreme income categories might bias income-related analyses.
 
-- Fruit and Vegetable Categories (`fruit_veg_cat`)\
-  - The majority of participants (**~86%**) are **Not Meeting Guidelines** for fruit and vegetable consumption.\
+- Fruit and Vegetable Categories (`fruit_veg_cat`)
+  - The majority of participants (**~86%**) are **Not Meeting Guidelines** for fruit and vegetable consumption.
   - The minority group (**~14%**) meeting guidelines should be explored for demographic or behavioral patterns.
 
-- Physical Activity Categories (`pa_cat`)\
-  - Moderate activity is the most common category (**43%**), followed by high activity (**32%**) and low activity (**25%**).\
+- Physical Activity Categories (`pa_cat`)
+  - Moderate activity is the most common category (**43%**), followed by high activity (**32%**) and low activity (**25%**).
   - Participants in the low activity group could be at higher risk for health issues and require targeted interventions.
 
 
@@ -443,12 +443,12 @@ grid.arrange(plot1, plot2, ncol = 1)
 ![](Lina_Li_A1_CHEP898_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
 **Summary:**
 
-- From first plot:\
-   - Both males and females show a wide range of physical activity levels across all income categories.\
-   - There is no clear upward or downward trend in physical activity as income increases.\
-   - Income might not be a strong predictor of physical activity levels for either gender.\
+- From first plot:
+   - Both males and females show a wide range of physical activity levels across all income categories.
+   - There is no clear upward or downward trend in physical activity as income increases.
+   - Income might not be a strong predictor of physical activity levels for either gender.
 
-- From second plot:\
+- From second plot:
    - The female curve has a slightly higher peak at lower activity levels, suggesting more females report lower physical activity.
    
 ### Plot 2
@@ -497,18 +497,18 @@ grid.arrange(plot3, plot4,plot5, ncol = 1, heights = c(1, 1, 1))
 
 **Summary:**
 
-- From first plot:\
-   - Both males and females exhibit similar distributions of physical activity levels (PA_TOTAL_SHORT) across the categories of fruit and vegetable consumption (fruit_veg_cat).\
+- From first plot:
+   - Both males and females exhibit similar distributions of physical activity levels (PA_TOTAL_SHORT) across the categories of fruit and vegetable consumption (fruit_veg_cat).
    - Individuals meeting dietary guidelines show slightly higher physical activity levels compared to those not meeting guidelines.
 
-- From second plot:\
+- From second plot:
    - A large proportion of individuals have total servings of fruits and vegetables (fruit_veg_tot) below 7, which falls under the **Not Meeting Guidelines** category.
    
-- From the third plot:\
-   - Across all income levels (SDC_INCOME), individuals meeting dietary guidelines consistently show higher average physical activity levels than those not meeting guidelines.\
-   - Females exhibit slightly higher average physical activity levels than males in the same income level for the **Not Meeting Guidelines** category.\
-   - Females exhibit a different pattern of average physical activity levels compared to males in the same income level for the **Meeting Guidelines** category.\
-   - Physical activity appears to fluctuate more with income among individuals meeting guidelines than those not meeting them.\
+- From the third plot:
+   - Across all income levels (SDC_INCOME), individuals meeting dietary guidelines consistently show higher average physical activity levels than those not meeting guidelines.
+   - Females exhibit slightly higher average physical activity levels than males in the same income level for the **Not Meeting Guidelines** category.
+   - Females exhibit a different pattern of average physical activity levels compared to males in the same income level for the **Meeting Guidelines** category.
+   - Physical activity appears to fluctuate more with income among individuals meeting guidelines than those not meeting them.
    - Income level may have a modest influence on physical activity, particularly for individuals meeting dietary guidelines.
 
    
@@ -534,12 +534,12 @@ ggplot(data, aes(x = fruit_veg_cat, y = PA_TOTAL_SHORT, color = gender_recode)) 
 
 **Summary:**
 
-- Both males and females exhibit similar variability in physical activity levels within each income and dietary category.\
-- There is a slight tendency for individuals meeting guidelines to cluster around higher activity levels.\
-- Females and males exhibit similar distributions of physical activity within the same income and dietary categories.\
-- Females tend to have slightly higher concentrations of individuals with moderate physical activity levels.\
-- Males exhibit slightly greater variability in physical activity, with more individuals reporting extremely high levels.\
-- Income level does not appear to have a strong or consistent relationship with physical activity across. \
+- Both males and females exhibit similar variability in physical activity levels within each income and dietary category.
+- There is a slight tendency for individuals meeting guidelines to cluster around higher activity levels.
+- Females and males exhibit similar distributions of physical activity within the same income and dietary categories.
+- Females tend to have slightly higher concentrations of individuals with moderate physical activity levels.
+- Males exhibit slightly greater variability in physical activity, with more individuals reporting extremely high levels.
+- Income level does not appear to have a strong or consistent relationship with physical activity across. 
 - Physical activity levels are scattered across all income groups, with no clear upward or downward trends.
 
 
