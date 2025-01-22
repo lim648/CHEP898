@@ -7,11 +7,10 @@ output:
       keep_md: true
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = F,message = F)
-```
 
-```{r,warning=FALSE}
+
+
+``` r
 library(rstatix)
 library(tidyverse)
 library(pastecs)
@@ -23,7 +22,8 @@ library(readr)
 library(gridExtra)
 ```
 
-```{r}
+
+``` r
 # Function for calculating statistics
 calculate_statistics <- function(data, column_name) {
   column_data <- data[[column_name]]
@@ -45,7 +45,6 @@ calculate_statistics <- function(data, column_name) {
   cat("Variance:", variance_value, "\n")
   cat("Standard Deviation:", sd_value, "\n")
 }
-
 ```
 
 # Assignment Introduction
@@ -66,7 +65,8 @@ calculate_statistics <- function(data, column_name) {
 
 ## Load the provided datasets and examine their structure.
 
-```{r, warning=FALSE}
+
+``` r
 # Load datasets
 data_demographics <- read_csv("can_path_demographics.csv")
 data_health <- read_csv("can_path_health.csv")
@@ -74,23 +74,87 @@ data_health <- read_csv("can_path_health.csv")
 # Check dimensions and missing data
 cat("Demographics data: ", ncol(data_demographics), "columns, ", nrow(data_demographics), "rows, ",
     sum(is.na(data_demographics)), "missing values.\n")
+```
+
+```
+## Demographics data:  3 columns,  41187 rows,  5934 missing values.
+```
+
+``` r
 cat("Health data: ", ncol(data_health), "columns, ", nrow(data_health), "rows, ",
     sum(is.na(data_health)), "missing values.\n")
+```
 
+```
+## Health data:  6 columns,  41187 rows,  13638 missing values.
 ```
 
 ## Check missing values
 
-```{r}
+
+``` r
 # Check how much missing data exists in each variable.
 colSums(is.na(data_demographics))
+```
+
+```
+##         ID SDC_GENDER SDC_INCOME 
+##          0          0       5934
+```
+
+``` r
 colSums(is.na(data_health))
+```
+
+```
+##              ID   HS_GEN_HEALTH     NUT_VEG_QTY  NUT_FRUITS_QTY  PA_TOTAL_SHORT 
+##               0             672            2549            2426            6763 
+## DIS_ASTHMA_EVER 
+##            1228
 ```
 ## Examine structure of the dataset
 
-```{r}
+
+``` r
 str(data_demographics)
+```
+
+```
+## spc_tbl_ [41,187 × 3] (S3: spec_tbl_df/tbl_df/tbl/data.frame)
+##  $ ID        : chr [1:41187] "SYN_58621" "SYN_58622" "SYN_58623" "SYN_58624" ...
+##  $ SDC_GENDER: num [1:41187] 2 2 2 2 2 2 2 2 2 2 ...
+##  $ SDC_INCOME: num [1:41187] 6 6 4 3 NA 4 5 3 3 5 ...
+##  - attr(*, "spec")=
+##   .. cols(
+##   ..   ID = col_character(),
+##   ..   SDC_GENDER = col_double(),
+##   ..   SDC_INCOME = col_double()
+##   .. )
+##  - attr(*, "problems")=<externalptr>
+```
+
+``` r
 str(data_health)
+```
+
+```
+## spc_tbl_ [41,187 × 6] (S3: spec_tbl_df/tbl_df/tbl/data.frame)
+##  $ ID             : chr [1:41187] "SYN_58621" "SYN_58622" "SYN_58623" "SYN_58624" ...
+##  $ HS_GEN_HEALTH  : num [1:41187] 3 4 3 4 3 5 5 3 3 4 ...
+##  $ NUT_VEG_QTY    : num [1:41187] 3 0 5 1 2 5 3 5 8 1 ...
+##  $ NUT_FRUITS_QTY : num [1:41187] 1 0 3 3 3 5 3 2 5 0 ...
+##  $ PA_TOTAL_SHORT : num [1:41187] 3564 0 NA 594 NA ...
+##  $ DIS_ASTHMA_EVER: num [1:41187] 0 0 2 0 1 2 0 NA 0 0 ...
+##  - attr(*, "spec")=
+##   .. cols(
+##   ..   ID = col_character(),
+##   ..   HS_GEN_HEALTH = col_double(),
+##   ..   NUT_VEG_QTY = col_double(),
+##   ..   NUT_FRUITS_QTY = col_double(),
+##   ..   PA_TOTAL_SHORT = col_double(),
+##   ..   DIS_ASTHMA_EVER = col_double()
+##   .. )
+##  - attr(*, "problems")=<externalptr>
 ```
 - **SDC_GENDER:** Gender of the participant.
 
@@ -109,7 +173,8 @@ str(data_health)
 ## Variable transformations
 
 ### Converting variables to factor
-```{r}
+
+``` r
 cols <- c("SDC_INCOME")
 
 data_demographics <- data_demographics %>% 
@@ -124,7 +189,8 @@ data_health <- data_health %>%
 
 ### Recode and label categorical variables as necessary
 
-```{r}
+
+``` r
 # Recode gender
 # The `SDC_GENDER` variable is numeric (1 for Male, 2 for Female), which is not intuitive for analysis.
 # Recode the numeric gender variable into descriptive categories ("Male" and "Female") for better interpretability.
@@ -182,17 +248,32 @@ data_health <- data_health %>%
     PA_TOTAL_SHORT >= 3000 ~ "High Activity",
     PA_TOTAL_SHORT >= 600 ~ "Moderate Activity"
   ))
-
 ```
 
 # Joining Datasets
 
 ## Combine two related datasets by performing appropriate join operations.
 
-```{r}
+
+``` r
 # Merge health and demographic data by ID
 data <- left_join(data_health,data_demographics, by=join_by(ID))
 head(data)
+```
+
+```
+## # A tibble: 6 × 13
+##   ID     HS_GEN_HEALTH NUT_VEG_QTY NUT_FRUITS_QTY PA_TOTAL_SHORT DIS_ASTHMA_EVER
+##   <chr>  <fct>               <dbl>          <dbl>          <dbl>           <dbl>
+## 1 SYN_5… 3                       3              1           3564               0
+## 2 SYN_5… 4                       0              0              0               0
+## 3 SYN_5… 3                       5              3             NA               2
+## 4 SYN_5… 4                       1              3            594               0
+## 5 SYN_5… 3                       2              3             NA               1
+## 6 SYN_5… 5                       5              5             NA               2
+## # ℹ 7 more variables: fruit_veg_tot <dbl>, fruit_veg_cat <chr>, pa_cat <chr>,
+## #   SDC_GENDER <dbl>, SDC_INCOME <fct>, gender_recode <fct>,
+## #   income_recode <chr>
 ```
 
 
@@ -200,20 +281,41 @@ head(data)
 
 ## Calculate key statistics.
 
-```{r}
+
+``` r
 # Calculate key statistics for total fruit and vegetable consumption
 # It helps summarize the overall consumption of fruits and vegetables in the dataset.
 calculate_statistics(data, "fruit_veg_tot")
 ```
 
-```{r}
+```
+## Statistics for column: fruit_veg_tot 
+## Mean: 4.815695 
+## Median: 4 
+## Mode: 4 
+## Variance: 6.963863 
+## Standard Deviation: 2.638913
+```
+
+
+``` r
 # Calculate key statistics for total physical activity
 # It provides insights into the distribution of total physical activity (measured in MET-minutes per week).
 calculate_statistics(data, "PA_TOTAL_SHORT")
 ```
 
+```
+## Statistics for column: PA_TOTAL_SHORT 
+## Mean: 2574.089 
+## Median: 1782 
+## Mode: NA 
+## Variance: 7055340 
+## Standard Deviation: 2656.189
+```
 
-```{r}
+
+
+``` r
 # Create a frequency table for gender distribution
 # The `table()` function counts the number of participants in each gender category (`gender_recode`).
 # The `prop.table()` function converts these counts into proportions, allowing for a percentage-based interpretation.
@@ -221,22 +323,53 @@ table_gender <- table(data$gender_recode)
 prop.table(table_gender)
 ```
 
-```{r}
+```
+## 
+##    Female      Male 
+## 0.6309515 0.3690485
+```
+
+
+``` r
 # Create a frequency table for income distribution
 table_income <- table(data$income_recode)
 prop.table(table_income)
 ```
 
-```{r}
+```
+## 
+##    1_Less than 10 000 $   2_10 000 $ - 24 999 $   3_25 000 $ - 49 999 $ 
+##              0.01338893              0.05630726              0.16296485 
+##   4_50 000 $ - 74 999 $   5_75 000 $ - 99 999 $ 6_100 000 $ - 149 999 $ 
+##              0.19377074              0.18727484              0.21558449 
+## 7_150 000 $ - 199 999 $     8_200 000 $ or more 
+##              0.09823277              0.07247610
+```
+
+
+``` r
 # Create a frequency table for fruit and vegetable consumption categories
 table_fruit <- table(data$fruit_veg_cat)
 prop.table(table_fruit)
 ```
 
-```{r}
+```
+## 
+##     Meeting Guidelines Not Meeting Guidelines 
+##              0.1368113              0.8631887
+```
+
+
+``` r
 # Create a frequency table for physical activity categories
 table_pa <- table(data$pa_cat)
 prop.table(table_pa)
+```
+
+```
+## 
+##     High Activity      Low Activity Moderate Activity 
+##         0.3184697         0.2499419         0.4315884
 ```
 
 
@@ -271,7 +404,8 @@ prop.table(table_pa)
 
 # Data Visualization
 
-```{r}
+
+``` r
 # Remove the missing values for future analysis.
 data <- na.omit(data)
 ```
@@ -280,7 +414,8 @@ data <- na.omit(data)
 
 ### Plot 1
 
-```{r}
+
+``` r
 # Income vs. Physical Activity by Gender
 # This plot visualizes the relationship between income level (SDC_INCOME) and physical activity (PA_TOTAL_SHORT) separately for males and females using facet_wrap
 plot1 <- ggplot(data, aes(x = SDC_INCOME, y = PA_TOTAL_SHORT, color = gender_recode)) +
@@ -303,8 +438,9 @@ plot2 <- ggplot(data, aes(x = PA_TOTAL_SHORT, fill = gender_recode)) +
   ) 
 
 grid.arrange(plot1, plot2, ncol = 1)
-
 ```
+
+![](Lina_Li_A1_CHEP898_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
 **Summary:**
 
 - From first plot:\
@@ -317,7 +453,8 @@ grid.arrange(plot1, plot2, ncol = 1)
    
 ### Plot 2
 
-```{r}
+
+``` r
 # Physical Activity by Fruit & Vegetable Category and Gender
 # This boxplot compares the distribution of physical activity levels (PA_TOTAL_SHORT) across fruit and vegetable categories (fruit_veg_cat), grouped by gender.
 plot3 <- ggplot(data, aes(x = fruit_veg_cat, y = PA_TOTAL_SHORT, fill = gender_recode)) +
@@ -354,8 +491,9 @@ plot5 <- ggplot(data, aes(x = SDC_INCOME, y = PA_TOTAL_SHORT, group = interactio
   theme(axis.title = element_text(size = 10))
 
 grid.arrange(plot3, plot4,plot5, ncol = 1, heights = c(1, 1, 1))
-
 ```
+
+![](Lina_Li_A1_CHEP898_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
 
 **Summary:**
 
@@ -375,7 +513,8 @@ grid.arrange(plot3, plot4,plot5, ncol = 1, heights = c(1, 1, 1))
 
    
 ### Physical Activity vs Income by Gender and Fruit & Vegetable Category
-```{r}
+
+``` r
 #This faceted scatterplot provides a detailed breakdown of physical activity by gender, income, and fruit/vegetable categories.
 
 ggplot(data, aes(x = fruit_veg_cat, y = PA_TOTAL_SHORT, color = gender_recode)) +
@@ -388,9 +527,9 @@ ggplot(data, aes(x = fruit_veg_cat, y = PA_TOTAL_SHORT, color = gender_recode)) 
     color = "Gender"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
-
-
 ```
+
+![](Lina_Li_A1_CHEP898_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
 
 
 **Summary:**
