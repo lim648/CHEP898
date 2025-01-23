@@ -14,7 +14,7 @@
 
 # Assignment Grading Scheme
 
-You can find the detailed descriptions for all assignments below or in the assignments folder [here](#).
+You can find the detailed descriptions for all assignments below or in the assignments folder.
 
 | Assignment                         | Grade % |
 |------------------------------------|---------|
@@ -52,7 +52,7 @@ You can find the detailed descriptions for all assignments below or in the assig
 
 ## Scientific Computing/Big Data
 **Value:** 10% of final grade  
-**Description:** In this assignment, you will use the [USask Plato High Performance Computing](#) to run large-scale machine learning on a large (~1GB) dataset.
+**Description:** In this assignment, you will use the USask Plato High Performance Computing to run large-scale machine learning on a large (~1GB) dataset.
 
 ## Matching
 **Value:** 15% of final grade  
