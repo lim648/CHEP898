@@ -1,0 +1,62 @@
+---
+title: "CHEP898_A3:Missing Data"
+author: "Lina"
+date: "2025-01-29"
+output: 
+  html_document:
+      keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment Introduction
+
+**Assignment Goal:** Demonstrate an understanding of various imputation techniques and their implications for analysis.
+
+**Assignment Objectives:**
+
+- Understand the nature and patterns of missing data in a large dataset.
+
+- Apply different imputation methods and assess their suitability for the dataset.
+
+- Compare the results of different imputation techniques using statistical and visual methods.
+
+- Develop insights into the impact of missing data handling on subsequent analyses.
+
+# Dataset Exploration
+
+## Load the provided health administrative dataset.
+
+## Explore the dataset to identify the extent, patterns, and potential reasons for missing data.
+## Summarize findings using tables, charts, or heatmaps to visualize missingness.
+
+# Apply Imputation Methods
+
+## Select and apply at least three different methods for imputing missing data, such as:
+
+  - Mean/Median/Mode imputation.\
+  - K-Nearest Neighbors (KNN) imputation.\
+  - Multiple Imputation by Chained Equations (MICE).
+  
+## Document the implementation process for each method.
+
+# Evaluation of Imputation Methods
+## Compare the imputed datasets by analyzing:
+
+  - Changes in key summary statistics (e.g., means, variances).
+  - The preservation of relationships between variables (e.g., correlations).
+  - Visual comparisons of distributions before and after imputation.
+  
+# Analysis of Imputed Data
+## Conduct a simple statistical analysis on the imputed datasets to illustrate the downstream effects of different imputation methods.
+
+##Discuss how the choice of imputation method impacts the analysis results.
+
+# Interpretation and Reporting
+## Provide a detailed comparison of the methods, discussing their strengths, weaknesses, and suitability for the dataset.
+## Reflect on the challenges of handling missing data in health research.
+
+
+
