@@ -8,7 +8,29 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+library(tidyverse)
+library(visdat)
+library(naniar)
+library(mice)
+```
+
+```{r}
+#  R function that counts how many columns in your dataset belong to each type 
+#(col_logical(), col_double(), col_character()):
+count_column_types <- function(data) {
+  # Count the number of columns for each type
+  counts <- data %>%
+    summarise(
+      logical_cols = sum(sapply(., is.logical)),
+      double_cols = sum(sapply(., is.double)),
+      character_cols = sum(sapply(., is.character))
+    )
+  
+  # Return the counts as a named vector
+  return(counts)
+}
+
 ```
 
 # Assignment Introduction
@@ -28,9 +50,97 @@ knitr::opts_chunk$set(echo = TRUE)
 # Dataset Exploration
 
 ## Load the provided health administrative dataset.
+```{r}
+# Load the data
+data <- read_csv("can_path_data.csv")
+
+# Select all columns between ID and HS_GEN_HEALTH, also select column PA_TOTAL_SHORT, 
+# PM_BMI_SR, all columns that contain the string "_EVER" anywhere in their names,
+# and all columns that contain the string "WRK_" anywhere in their names
+select_data <- data %>% select(ID:HS_GEN_HEALTH, PA_TOTAL_SHORT, PM_BMI_SR, 
+                        contains("_EVER"), contains("WRK_"))
+
+# Check dimensions and missing data
+cat("The select data has ", ncol(select_data), "columns, ", nrow(select_data), "rows, and ",
+    sum(is.na(select_data)), "missing values.\n")
+```
 
 ## Explore the dataset to identify the extent, patterns, and potential reasons for missing data.
+
+```{r}
+missing_table <- miss_var_summary(select_data)
+
+# Count the number of variables with pct_miss > 85%
+count_high_missing <- missing_table %>%
+  filter(pct_miss > 85) %>%
+  summarise(count = n())
+
+# Display the result
+cat("Number of variables with missing rate more than 85%:", count_high_missing$count, "\n")
+
+```
+
+```{r}
+# Extract variable names with more than 85% missing data
+high_missing_vars <- missing_table %>%
+  filter(pct_miss > 85) %>%
+  pull(variable)
+
+high_missing_data <- select_data %>%
+  select(all_of(high_missing_vars))
+```
+
+Check how many columns in the data read as logical variable.
+```{r}
+# Check how many columns in the high missing data belong to each type 
+#(col_logical(), col_double(), col_character())
+column_type_counts_high <- count_column_types(high_missing_data)
+
+cat("Number of logical variables in high missing data:", column_type_counts_high$logical_cols, 
+    ", and number of numeric variables in high missing data:", column_type_counts_high$double_cols, "\n")
+
+# Get rid the columns read as logical
+logical_variable_names <- high_missing_data %>%
+  select_if(is.logical) %>%
+  colnames()
+
+select_data <- select_data %>% select(!(logical_variable_names))
+
+```
+
+
+
 ## Summarize findings using tables, charts, or heatmaps to visualize missingness.
+
+```{r}
+# Missing data table
+missing_table
+
+# Visualize missing data
+## The bar plot shows how many rows in the dataset have missing values for each variable
+gg_miss_var(high_missing_data) + ggtitle("Missing Data by Variable")
+
+## UpSet is used to display the intersections between multiple sets of data
+gg_miss_upset(high_missing_data)
+```
+
+From the table above, we can see that there are 102 variables with more than 85% missing data. Among these 102 variables, 10 are logical variables, and 99 are numeric variables. The logical variables should be excluded, and since the 99 numeric variables are difficult to explain, we do not include them in our further data analysis. This is also supported by the following plots.
+
+The bar chart provides a general overview of missing data per variable. It shows that all 102 variables have more than 35,000 missing data points.
+
+The UpSet plot illustrates patterns of missing data across variables. The highest bar (the leftmost one) represents 41,127 rows where certain variables have missing data. The middle bar corresponds to 44 rows where two specific variables have missing values simultaneously, and the rightmost bar corresponds to 16 rows where another subset of variables is missing together. The large number of rows represented by the 41,127-row bar in the UpSet plot indicates that many variables have missing data for a significant portion of the dataset, which could affect the analysis.
+
+
+```{r}
+select_data_less_85 <- select_data %>%
+          select(where(~sum(is.na(.x))/length(.x) < 0.85))
+
+# Double check the data
+missing_table_less_85 <- miss_var_summary(select_data_less_85)
+missing_table_less_85
+```
+
+At this step, we can see that all the missing rates are less than 85%.
 
 # Apply Imputation Methods
 
