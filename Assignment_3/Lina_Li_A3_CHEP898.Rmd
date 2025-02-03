@@ -140,9 +140,58 @@ missing_table_less_85 <- miss_var_summary(select_data_less_85)
 missing_table_less_85
 ```
 
-At this step, we can see that all the missing rates are less than 85%.
+```{r}
+vis_dat(select_data_less_85, warn_large_data = FALSE)
+```
+
+At this step, we can see that all the missing rates are less than 85%, the variables reduced from 194 to 92. Now let's move on to next step. 
 
 # Apply Imputation Methods
+
+Use the UpSet help us visuliaze potential patterns in missing data that will 
+give is information about which variables to include or exclude from our missing data model
+```{r}
+gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
+```
+Variables summary
+
+- **DIS_IBS_FAM_EVER** : Occurrence of irritable bowel syndrome at any point during 
+the life of the participant's relatives (father, mother, siblings and children).
+
+- **PM_BMI_SR** :Weight (in kg) divided by height (in m) squared.
+Body mass index = (Weight) / (Standing height * 0.01)^2
+Measure taken and reported by the participant.
+
+- **HS_MMG_EVER** : Indicator of whether the female participant has ever had a 
+mammography.
+
+- **HS_PAP_EVER** : Indicator of whether the female participant has ever had a 
+Pap test (Pap smear). 
+
+- **DIS_ENDO_HB_CHOL_EVER** : Occurrence of high blood cholesterol at any point 
+during the life of the participant.
+
+- **DIS_MH_ADDICTION_EVER** : Occurrence of addiction disorder (e.g. alcohol, 
+drug or gambling dependence) at any point during the life of the participant.
+
+- **DIS_MH_ANXIETY_EVER** : Occurrence of anxiety disorder at any point during 
+the life of the participant.
+
+- **DIS_NEURO_MIGRAINE_EVER** : Occurrence of migraines at any point during the 
+life of the participant.
+
+- **DIS_RESP_SLEEP_APNEA_EVER** : Occurrence of sleep apnea at any point during 
+the life of the participant.
+
+- **DIS_CARDIO_HD_EVER** : Occurrence of heart disease at any point during the 
+life of the participant.
+
+**Summary:** A clear pattern is that the __MH__ variables tend to be missing together.
+These variables are related to mental health conditions such as addiction and 
+anxiety. Missingness in these variables might be due to participants being unwilling 
+to disclose personal mental health details due to stigma or lack of awareness of 
+a formal diagnosis. Participants may not recognize or report mental health conditions, 
+leading to a consistent pattern of missingness in these variables.
 
 ## Select and apply at least three different methods for imputing missing data, such as:
 
