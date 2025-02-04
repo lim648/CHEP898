@@ -16,7 +16,7 @@ library(mice)
 library(purrr)
 library(dplyr)
 library(data.table)
-library(gridExtra)
+library(patchwork)
 ```
 
 ```{r}
@@ -34,7 +34,6 @@ count_column_types <- function(data) {
   # Return the counts as a named vector
   return(counts)
 }
-
 ```
 
 # Assignment Introduction
@@ -147,7 +146,7 @@ At this step, we can see that all the missing rates are less than 85%, the varia
 Use the UpSet again help us visuliaze potential patterns in missing data that will 
 give is information about which variables to include or exclude from our missing data model
 ```{r}
-#gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
+gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
 ```
 
 **Variables summary**:
@@ -211,14 +210,14 @@ select_data_less_85[cols_to_convert] <- lapply(select_data_less_85[cols_to_conve
 ```
 
 ```{r}
-#vis_miss(select_data_less_85, warn_large_data = FALSE)
+vis_miss(select_data_less_85, warn_large_data = FALSE)
 ```
 
 
 
 # Apply Imputation Methods
 
-## Mean/Median/Mode imputation
+## Mean and Median imputation
 
 First method that I try is the Mean and Median imputation for all the numeric variables.
 
@@ -263,7 +262,6 @@ data_shadow_mean <- impute_mean_at(data_shadow_mean, .vars = vars(one_of(impute_
 data_mean <- data_shadow_mean %>% 
   rename_with(~ paste0(.,"_mean"), .cols = all_of(impute_vars))
 
-
 ## Median Imputation
 # Shadow matrix for num_data
 data_shadow_median <- num_data %>% bind_shadow()
@@ -281,13 +279,11 @@ data_shadow_median <- impute_median_at(data_shadow_median, .vars = vars(one_of(i
 data_median <- data_shadow_median %>% 
   rename_with(~ paste0(.,"_median"), .cols = all_of(impute_vars))
 
-
 # Merge the two datasets by row
 merged_data <- bind_rows(data_mean, data_median)
 
 # Exclude variables containing "_NA" 
 merged_data_filtered <- merged_data[, !grepl("_NA", names(merged_data))]
-
 
 ```
 
@@ -322,11 +318,10 @@ density_plot <- ggplot(as.data.frame(data_long), aes(x = value, colour = method)
     y = "Density",
     colour = "Method"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "bottom") 
 
-# Display the plot
-print(density_plot)
-
+density_plot
 ```
 
 **Key Findings**
@@ -366,13 +361,16 @@ variables can effectively use both mean and median imputation.
 ## Multivariate Imputation by Chained Equations (MICE)
 
 ```{r}
-data_imp <- mice(select_data_less_85, m = 1, maxit = 1)
-saveRDS(data_imp,file="data_imp.rds")
+# This model take so much time, I only run one time and save the model result
+# data_imp <- mice(select_data_less_85, m = 1, maxit = 1) 
+# saveRDS(data_imp,file="data_imp.rds")
+
+data_imp <- readRDS("data_imp.rds")
 
 data_imp_c <- complete(data_imp)
 
-miss_var_summary(select_data_less_85)
-miss_var_summary(data_imp_c)
+# miss_var_summary(select_data_less_85) # double check the missing rate, not run
+# miss_var_summary(data_imp_c) # double check the missing rate, not run
 
 # data_imp$method
 
@@ -383,42 +381,51 @@ joined_data <- select_data_less_85 %>%
   left_join(data_imp_complete, by = c("ID" = "ID_com"))
 ```
 
+
 ```{r}
-# Example for numeric variables by unsing mice
+# Define variable pairs
 variable_pairs <- list(
+  list(original = "PA_TOTAL_SHORT", imputed = "PA_TOTAL_SHORT_com"),
+  list(original = "PM_BMI_SR", imputed = "PM_BMI_SR_com"),
+  list(original = "PSE_ADULT_WRK_DURATION", imputed = "PSE_ADULT_WRK_DURATION_com"),
   list(original = "SDC_AGE_CALC", imputed = "SDC_AGE_CALC_com"),
   list(original = "SDC_EDU_LEVEL_AGE", imputed = "SDC_EDU_LEVEL_AGE_com"),
-  list(original = "SDC_INCOME_IND_NB", imputed = "SDC_INCOME_IND_NB_com"),
+  list(original = "SDC_HOUSEHOLD_ADULTS_NB", imputed = "SDC_HOUSEHOLD_ADULTS_NB_com"),
   list(original = "SDC_HOUSEHOLD_CHILDREN_NB", imputed = "SDC_HOUSEHOLD_CHILDREN_NB_com"),
-  list(original = "PA_TOTAL_SHORT", imputed = "PA_TOTAL_SHORT_com"),
-  list(original = "PM_BMI_SR", imputed = "PM_BMI_SR_com")
+  list(original = "SDC_INCOME_IND_NB", imputed = "SDC_INCOME_IND_NB_com")
 )
 
-plots <- list()
-
-# Create individual plots for each variable pair
-for (pair in variable_pairs) {
-  original_var <- pair$original
-  imputed_var <- pair$imputed
-  
-  # Create the density plot
-  plot <- ggplot(data = joined_data) +
-    geom_density(aes_string(x = original_var, colour = shQuote(original_var)), size = 1) +
-    geom_density(aes_string(x = imputed_var, colour = shQuote(imputed_var)), size = 1) +
+# Create individual plots without legends
+plots <- invisible(lapply(variable_pairs, function(pair) {
+  ggplot(data = joined_data) +
+    geom_density(aes_string(x = pair$original, colour = "'Original'"), size = 1) +
+    geom_density(aes_string(x = pair$imputed, colour = "'Imputed'"), size = 1) +
     labs(
-      title = paste("Density Plot for", original_var),
+      title = paste(pair$original),
       x = "Value",
-      y = "Density",
-      colour = "Variable"
+      y = "Density"
     ) +
-    theme_minimal()
-  
-  # Add the plot to the list
-  plots[[length(plots) + 1]] <- plot
-}
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(size = 7)
+    )
+}))
 
-# Arrange the plots in a 2x2 grid
-grid.arrange(grobs = plots, ncol = 2)
+# Create a legend plot
+legend_plot <- ggplot(data = joined_data) +
+  geom_density(aes(x = 0, colour = "Original")) +
+  geom_density(aes(x = 0, colour = "Imputed")) +
+  theme_void() +
+  theme(legend.position = "bottom")
+
+# Combine plots into a grid with a shared legend
+combined_plot <- wrap_plots(plots, ncol = 3) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+# Display the combined plot
+print(combined_plot)
 
 ```
 
@@ -426,10 +433,10 @@ grid.arrange(grobs = plots, ncol = 2)
 numeric variables, as most imputed distributions align closely with the original 
 distributions.
 
-# Analysis of Imputed Data
-## Conduct a simple statistical analysis on the imputed datasets to illustrate the downstream effects of different imputation methods.
 
-Now have an imputation model with some uncertainty and we want to get a pooled regression result the also accounts for the uncertainty
+# Analysis of Imputed Data
+Now have an imputation model with some uncertainty and we want to get a pooled 
+regression result the also accounts for the uncertainty
 
 ```{r}
 set.seed(123)
@@ -446,18 +453,47 @@ summary(lm_mice_pooled)
 summary(lm_model)
 ```
 
+**Summary**
 
 Here we get quite different results from when we don't deal with missing data. 
 
-1. 11936 observations (~ 30%) of the data are deleted due to missing. 
-2. In the pooled model, the standard error is correctly estimated and is smaller 
-than that of the non-imputed data model. 
+- The `lm_mice_pooled` includes 41178 obervation.
 
-##Discuss how the choice of imputation method impacts the analysis results.
+- The `lm_model` includes 29,242 observations, as 11936 observations (~ 30%) were
+missing data.
 
-# Interpretation and Reporting
-## Provide a detailed comparison of the methods, discussing their strengths, weaknesses, and suitability for the dataset.
-## Reflect on the challenges of handling missing data in health research.
+- The standard errors in the `lm_mice_pooled` are smaller compared to the `lm_model`. 
+This reflects better statistical efficiency due to the inclusion of more 
+observations via imputation.
+
+
+# Disscussion and Conclusion
+
+As seen from the density plots, the mean and median imputation methods introduce 
+significant imputation effects, particularly for variables with high missing rates. 
+For instance, `PM_BMI_SR` (29.1% missing) and `PA_TOTAL_SHORT` (16.4% missing) 
+show big peak in their distribution due to imputation, indicating that these 
+methods might distort the data structure for variables with a high percentage of 
+missing values. The imputation effect is less evident for variables with lower missing rates. 
+The advantages of mean and median imputation methods include being easy to 
+implement and interpret, as well as being computationally efficient, even for 
+large datasets. However, their disadvantages include failing to account for 
+relationships between variables, which may lead to biased results.
+
+The **mice** method performs better for numerical variables and is also effective 
+for categorical variables, even for those with high missing rates. For example, 
+in numerical variables, the density plots show that **mice** retains the overall 
+distribution shape more effectively than mean/median imputation. Categorical variables 
+also benefit from **mice**, as regression models that include imputed categorical 
+data yield smaller standard errors and improved model performance. The **mice** 
+effectively utilizes the relationships between variables to impute missing values, 
+thereby reducing bias in the analysis. However, **mice** is computationally intensive, 
+requiring significant time and resources, making it less practical for very large datasets. 
+Nonetheless, it is highly suitable for datasets with moderate to high missing rates 
+and complex variable relationships.
+
+
+
 
 
 

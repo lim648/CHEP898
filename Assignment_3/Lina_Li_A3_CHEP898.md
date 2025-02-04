@@ -182,8 +182,10 @@ Use the UpSet again help us visuliaze potential patterns in missing data that wi
 give is information about which variables to include or exclude from our missing data model
 
 ``` r
-#gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
+gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
 ```
+
+![](Lina_Li_A3_CHEP898_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
 **Variables summary**:
 
@@ -248,14 +250,16 @@ select_data_less_85[cols_to_convert] <- lapply(select_data_less_85[cols_to_conve
 
 
 ``` r
-#vis_miss(select_data_less_85, warn_large_data = FALSE)
+vis_miss(select_data_less_85, warn_large_data = FALSE)
 ```
+
+![](Lina_Li_A3_CHEP898_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 
 
 # Apply Imputation Methods
 
-## Mean/Median/Mode imputation
+## Mean and Median imputation
 
 First method that I try is the Mean and Median imputation for all the numeric variables.
 
@@ -316,7 +320,6 @@ data_shadow_mean <- impute_mean_at(data_shadow_mean, .vars = vars(one_of(impute_
 data_mean <- data_shadow_mean %>% 
   rename_with(~ paste0(.,"_mean"), .cols = all_of(impute_vars))
 
-
 ## Median Imputation
 # Shadow matrix for num_data
 data_shadow_median <- num_data %>% bind_shadow()
@@ -333,7 +336,6 @@ data_shadow_median <- impute_median_at(data_shadow_median, .vars = vars(one_of(i
 # Rename the imputed columns to mark them as "median"
 data_median <- data_shadow_median %>% 
   rename_with(~ paste0(.,"_median"), .cols = all_of(impute_vars))
-
 
 # Merge the two datasets by row
 merged_data <- bind_rows(data_mean, data_median)
@@ -374,10 +376,10 @@ density_plot <- ggplot(as.data.frame(data_long), aes(x = value, colour = method)
     y = "Density",
     colour = "Method"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position = "bottom") 
 
-# Display the plot
-print(density_plot)
+density_plot
 ```
 
 ![](Lina_Li_A3_CHEP898_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
@@ -420,62 +422,17 @@ variables can effectively use both mean and median imputation.
 
 
 ``` r
-data_imp <- mice(select_data_less_85, m = 1, maxit = 1)
-```
+# This model take so much time, I only run one time and save the model result
+# data_imp <- mice(select_data_less_85, m = 1, maxit = 1) 
+# saveRDS(data_imp,file="data_imp.rds")
 
-```
-## 
-##  iter imp variable
-##   1   1  SDC_MARITAL_STATUS  SDC_EDU_LEVEL  SDC_EDU_LEVEL_AGE  SDC_INCOME  SDC_INCOME_IND_NB  SDC_HOUSEHOLD_ADULTS_NB  SDC_HOUSEHOLD_CHILDREN_NB  HS_GEN_HEALTH  PA_TOTAL_SHORT  PM_BMI_SR  HS_ROUTINE_VISIT_EVER  HS_DENTAL_VISIT_EVER  HS_FOBT_EVER  HS_COL_EVER  HS_SIG_EVER  HS_SIG_COL_EVER  HS_POLYP_EVER  HS_PSA_EVER  WH_CONTRACEPTIVES_EVER  WH_HFT_EVER  WH_MENOPAUSE_EVER  WH_HRT_EVER  WH_HYSTERECTOMY_EVER  WH_OOPHORECTOMY_EVER  HS_MMG_EVER  HS_PAP_EVER  DIS_HBP_EVER  DIS_MI_EVER  DIS_STROKE_EVER  DIS_ASTHMA_EVER  DIS_COPD_EVER  DIS_DEP_EVER  DIS_DIAB_EVER  DIS_LC_EVER  DIS_CH_EVER  DIS_CROHN_EVER  DIS_UC_EVER  DIS_IBS_EVER  DIS_ECZEMA_EVER  DIS_SLE_EVER  DIS_PS_EVER  DIS_MS_EVER  DIS_OP_EVER  DIS_ARTHRITIS_EVER  DIS_CANCER_EVER  DIS_HBP_FAM_EVER  DIS_MI_FAM_EVER  DIS_STROKE_FAM_EVER  DIS_ASTHMA_FAM_EVER  DIS_COPD_FAM_EVER  DIS_DEP_FAM_EVER  DIS_DIAB_FAM_EVER  DIS_LC_FAM_EVER  DIS_CH_FAM_EVER  DIS_CROHN_FAM_EVER  DIS_UC_FAM_EVER  DIS_IBS_FAM_EVER  DIS_ECZEMA_FAM_EVER  DIS_SLE_FAM_EVER  DIS_PS_FAM_EVER  DIS_MS_FAM_EVER  DIS_OP_FAM_EVER  DIS_ARTHRITIS_FAM_EVER  DIS_CANCER_FAM_EVER  DIS_CANCER_F_EVER  DIS_CANCER_M_EVER  DIS_CANCER_SIB_EVER  DIS_CANCER_CHILD_EVER  ALC_EVER  SMK_CIG_EVER  SMK_CIG_WHOLE_EVER  DIS_ENDO_HB_CHOL_EVER  DIS_CARDIO_HD_EVER  DIS_RESP_SLEEP_APNEA_EVER  DIS_MH_ANXIETY_EVER  DIS_MH_ADDICTION_EVER  DIS_NEURO_MIGRAINE_EVER  PSE_ADULT_WRK_DURATION  PSE_WRK_FREQ  WRK_FULL_TIME  WRK_PART_TIME  WRK_RETIREMENT  WRK_HOME_FAMILY  WRK_UNABLE  WRK_UNEMPLOYED  WRK_UNPAID  WRK_STUDENT  WRK_EMPLOYMENT  WRK_SCHEDULE_CUR_CAT
-```
-
-``` r
-saveRDS(data_imp,file="data_imp.rds")
+data_imp <- readRDS("data_imp.rds")
 
 data_imp_c <- complete(data_imp)
 
-miss_var_summary(select_data_less_85)
-```
+# miss_var_summary(select_data_less_85) # double check the missing rate, not run
+# miss_var_summary(data_imp_c) # double check the missing rate, not run
 
-```
-## # A tibble: 93 × 3
-##    variable                  n_miss pct_miss
-##    <chr>                      <int>    <num>
-##  1 DIS_CARDIO_HD_EVER         24566     59.6
-##  2 DIS_RESP_SLEEP_APNEA_EVER  23308     56.6
-##  3 DIS_NEURO_MIGRAINE_EVER    22992     55.8
-##  4 DIS_MH_ANXIETY_EVER        22966     55.8
-##  5 DIS_MH_ADDICTION_EVER      22439     54.5
-##  6 DIS_ENDO_HB_CHOL_EVER      22297     54.1
-##  7 HS_PAP_EVER                16182     39.3
-##  8 HS_MMG_EVER                15995     38.8
-##  9 PM_BMI_SR                  11976     29.1
-## 10 DIS_IBS_FAM_EVER           10867     26.4
-## # ℹ 83 more rows
-```
-
-``` r
-miss_var_summary(data_imp_c)
-```
-
-```
-## # A tibble: 93 × 3
-##    variable                n_miss pct_miss
-##    <chr>                    <int>    <num>
-##  1 ID                           0        0
-##  2 ADM_STUDY_ID                 0        0
-##  3 SDC_GENDER                   0        0
-##  4 SDC_AGE_CALC                 0        0
-##  5 SDC_MARITAL_STATUS           0        0
-##  6 SDC_EDU_LEVEL                0        0
-##  7 SDC_EDU_LEVEL_AGE            0        0
-##  8 SDC_INCOME                   0        0
-##  9 SDC_INCOME_IND_NB            0        0
-## 10 SDC_HOUSEHOLD_ADULTS_NB      0        0
-## # ℹ 83 more rows
-```
-
-``` r
 # data_imp$method
 
 data_imp_complete <- data_imp_c %>%
@@ -486,42 +443,51 @@ joined_data <- select_data_less_85 %>%
 ```
 
 
+
 ``` r
-# Example for numeric variables by unsing mice
+# Define variable pairs
 variable_pairs <- list(
+  list(original = "PA_TOTAL_SHORT", imputed = "PA_TOTAL_SHORT_com"),
+  list(original = "PM_BMI_SR", imputed = "PM_BMI_SR_com"),
+  list(original = "PSE_ADULT_WRK_DURATION", imputed = "PSE_ADULT_WRK_DURATION_com"),
   list(original = "SDC_AGE_CALC", imputed = "SDC_AGE_CALC_com"),
   list(original = "SDC_EDU_LEVEL_AGE", imputed = "SDC_EDU_LEVEL_AGE_com"),
-  list(original = "SDC_INCOME_IND_NB", imputed = "SDC_INCOME_IND_NB_com"),
+  list(original = "SDC_HOUSEHOLD_ADULTS_NB", imputed = "SDC_HOUSEHOLD_ADULTS_NB_com"),
   list(original = "SDC_HOUSEHOLD_CHILDREN_NB", imputed = "SDC_HOUSEHOLD_CHILDREN_NB_com"),
-  list(original = "PA_TOTAL_SHORT", imputed = "PA_TOTAL_SHORT_com"),
-  list(original = "PM_BMI_SR", imputed = "PM_BMI_SR_com")
+  list(original = "SDC_INCOME_IND_NB", imputed = "SDC_INCOME_IND_NB_com")
 )
 
-plots <- list()
-
-# Create individual plots for each variable pair
-for (pair in variable_pairs) {
-  original_var <- pair$original
-  imputed_var <- pair$imputed
-  
-  # Create the density plot
-  plot <- ggplot(data = joined_data) +
-    geom_density(aes_string(x = original_var, colour = shQuote(original_var)), size = 1) +
-    geom_density(aes_string(x = imputed_var, colour = shQuote(imputed_var)), size = 1) +
+# Create individual plots without legends
+plots <- invisible(lapply(variable_pairs, function(pair) {
+  ggplot(data = joined_data) +
+    geom_density(aes_string(x = pair$original, colour = "'Original'"), size = 1) +
+    geom_density(aes_string(x = pair$imputed, colour = "'Imputed'"), size = 1) +
     labs(
-      title = paste("Density Plot for", original_var),
+      title = paste(pair$original),
       x = "Value",
-      y = "Density",
-      colour = "Variable"
+      y = "Density"
     ) +
-    theme_minimal()
-  
-  # Add the plot to the list
-  plots[[length(plots) + 1]] <- plot
-}
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(size = 7)
+    )
+}))
 
-# Arrange the plots in a 2x2 grid
-grid.arrange(grobs = plots, ncol = 2)
+# Create a legend plot
+legend_plot <- ggplot(data = joined_data) +
+  geom_density(aes(x = 0, colour = "Original")) +
+  geom_density(aes(x = 0, colour = "Imputed")) +
+  theme_void() +
+  theme(legend.position = "bottom")
+
+# Combine plots into a grid with a shared legend
+combined_plot <- wrap_plots(plots, ncol = 3) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+# Display the combined plot
+print(combined_plot)
 ```
 
 ![](Lina_Li_A3_CHEP898_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
@@ -530,10 +496,10 @@ grid.arrange(grobs = plots, ncol = 2)
 numeric variables, as most imputed distributions align closely with the original 
 distributions.
 
-# Analysis of Imputed Data
-## Conduct a simple statistical analysis on the imputed datasets to illustrate the downstream effects of different imputation methods.
 
-Now have an imputation model with some uncertainty and we want to get a pooled regression result the also accounts for the uncertainty
+# Analysis of Imputed Data
+Now have an imputation model with some uncertainty and we want to get a pooled 
+regression result the also accounts for the uncertainty
 
 
 ``` r
@@ -613,18 +579,47 @@ summary(lm_model)
 ## F-statistic: 5.564 on 8 and 29242 DF,  p-value: 4.61e-07
 ```
 
+**Summary**
 
 Here we get quite different results from when we don't deal with missing data. 
 
-1. 11936 observations (~ 30%) of the data are deleted due to missing. 
-2. In the pooled model, the standard error is correctly estimated and is smaller 
-than that of the non-imputed data model. 
+- The `lm_mice_pooled` includes 41178 obervation.
 
-##Discuss how the choice of imputation method impacts the analysis results.
+- The `lm_model` includes 29,242 observations, as 11936 observations (~ 30%) were
+missing data.
 
-# Interpretation and Reporting
-## Provide a detailed comparison of the methods, discussing their strengths, weaknesses, and suitability for the dataset.
-## Reflect on the challenges of handling missing data in health research.
+- The standard errors in the `lm_mice_pooled` are smaller compared to the `lm_model`. 
+This reflects better statistical efficiency due to the inclusion of more 
+observations via imputation.
+
+
+# Disscussion and Conclusion
+
+As seen from the density plots, the mean and median imputation methods introduce 
+significant imputation effects, particularly for variables with high missing rates. 
+For instance, `PM_BMI_SR` (29.1% missing) and `PA_TOTAL_SHORT` (16.4% missing) 
+show big peak in their distribution due to imputation, indicating that these 
+methods might distort the data structure for variables with a high percentage of 
+missing values. The imputation effect is less evident for variables with lower missing rates. 
+The advantages of mean and median imputation methods include being easy to 
+implement and interpret, as well as being computationally efficient, even for 
+large datasets. However, their disadvantages include failing to account for 
+relationships between variables, which may lead to biased results.
+
+The **mice** method performs better for numerical variables and is also effective 
+for categorical variables, even for those with high missing rates. For example, 
+in numerical variables, the density plots show that **mice** retains the overall 
+distribution shape more effectively than mean/median imputation. Categorical variables 
+also benefit from **mice**, as regression models that include imputed categorical 
+data yield smaller standard errors and improved model performance. The **mice** 
+effectively utilizes the relationships between variables to impute missing values, 
+thereby reducing bias in the analysis. However, **mice** is computationally intensive, 
+requiring significant time and resources, making it less practical for very large datasets. 
+Nonetheless, it is highly suitable for datasets with moderate to high missing rates 
+and complex variable relationships.
+
+
+
 
 
 
