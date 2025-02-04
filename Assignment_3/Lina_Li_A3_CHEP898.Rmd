@@ -13,6 +13,9 @@ library(tidyverse)
 library(visdat)
 library(naniar)
 library(mice)
+library(purrr)
+library(dplyr)
+library(data.table)
 ```
 
 ```{r}
@@ -115,7 +118,6 @@ select_data <- select_data %>% select(!(logical_variable_names))
 ```{r}
 # Missing data table
 missing_table
-
 # Visualize missing data
 ## The bar plot shows how many rows in the dataset have missing values for each variable
 gg_miss_var(high_missing_data) + ggtitle("Missing Data by Variable")
@@ -137,23 +139,17 @@ select_data_less_85 <- select_data %>%
 
 # Double check the data
 missing_table_less_85 <- miss_var_summary(select_data_less_85)
-missing_table_less_85
-```
-
-```{r}
-vis_dat(select_data_less_85, warn_large_data = FALSE)
 ```
 
 At this step, we can see that all the missing rates are less than 85%, the variables reduced from 194 to 92. Now let's move on to next step. 
 
-# Apply Imputation Methods
-
-Use the UpSet help us visuliaze potential patterns in missing data that will 
+Use the UpSet again help us visuliaze potential patterns in missing data that will 
 give is information about which variables to include or exclude from our missing data model
 ```{r}
 gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
 ```
-Variables summary
+
+**Variables summary**:
 
 - **DIS_IBS_FAM_EVER** : Occurrence of irritable bowel syndrome at any point during 
 the life of the participant's relatives (father, mother, siblings and children).
@@ -193,13 +189,186 @@ to disclose personal mental health details due to stigma or lack of awareness of
 a formal diagnosis. Participants may not recognize or report mental health conditions, 
 leading to a consistent pattern of missingness in these variables.
 
+```{r}
+# Fix the data
+select_data_less_85 <- select_data_less_85 %>% mutate_at(3, factor)
+select_data_less_85 <- select_data_less_85 %>% mutate_at(5:12, factor)
+select_data_less_85 <- select_data_less_85 %>% mutate_at(14:81, factor)
+select_data_less_85 <- select_data_less_85 %>% mutate_at(83:93, factor)
+
+# After check the CANPATH_data_dictionary convert the following variables back to num
+select_data_less_85$PM_BMI_SR <- as.numeric(select_data_less_85$PM_BMI_SR)
+select_data_less_85$SDC_EDU_LEVEL_AGE <- as.numeric(select_data_less_85$SDC_EDU_LEVEL_AGE)
+
+cols_to_convert <- c("SDC_INCOME_IND_NB", "SDC_HOUSEHOLD_ADULTS_NB", "SDC_HOUSEHOLD_CHILDREN_NB")
+
+select_data_less_85[cols_to_convert] <- lapply(select_data_less_85[cols_to_convert], function(x) {
+  as.numeric(as.character(x))
+})
+
+#str(select_data_less_85) not run
+```
+
+```{r}
+vis_miss(select_data_less_85, warn_large_data = FALSE)
+```
+
+
+
+# Apply Imputation Methods
+
 ## Select and apply at least three different methods for imputing missing data, such as:
 
   - Mean/Median/Mode imputation.\
   - K-Nearest Neighbors (KNN) imputation.\
   - Multiple Imputation by Chained Equations (MICE).
   
-## Document the implementation process for each method.
+
+## Mean/Median/Mode imputation
+
+First method that I try is the Mean and Median imputation for all the numeric variables.
+
+```{r}
+# Extract the numeric variables
+num_data <- select_data_less_85[sapply(select_data_less_85, is.numeric)]
+
+# For each column in num_data, calculate the summary statistics.
+summary_data <- map_dfr(num_data, ~{
+  tibble(
+    n      = n_distinct(.x),
+    na     = sum(is.na(.x)),
+    median = median(.x, na.rm = TRUE),
+    mean   = mean(.x, na.rm = TRUE)
+  )
+}, .id = "variable")
+
+# Display the result
+summary_data
+
+```
+Now we get a value for median and mean for each numeric variables.
+
+```{r}
+# Define variables to impute (exclude the ID)
+impute_vars <- setdiff(names(num_data), "ADM_STUDY_ID")
+
+## Mean Imputation
+# Shadow matrix for num_data
+data_shadow_mean <- num_data %>% bind_shadow()
+
+# Create backup columns for each variable to be imputed
+for (var in impute_vars) {
+  backup_name <- paste0(var, "_not_imputed")
+  data_shadow_mean[[backup_name]] <- data_shadow_mean[[var]]
+}
+
+# Impute missing values using the mean for each variable in impute_vars
+data_shadow_mean <- impute_mean_at(data_shadow_mean, .vars = vars(one_of(impute_vars)))
+
+# Rename the imputed columns to mark them as "mean"
+data_mean <- data_shadow_mean %>% 
+  rename_with(~ paste0(.,"_mean"), .cols = all_of(impute_vars))
+
+
+## Median Imputation
+# Shadow matrix for num_data
+data_shadow_median <- num_data %>% bind_shadow()
+
+# Create backup columns for each variable to be imputed
+for (var in impute_vars) {
+  backup_name <- paste0(var, "_not_imputed")
+  data_shadow_median[[backup_name]] <- data_shadow_median[[var]]
+}
+
+# Impute missing values using the median for each variable in impute_vars
+data_shadow_median <- impute_median_at(data_shadow_median, .vars = vars(one_of(impute_vars)))
+
+# Rename the imputed columns to mark them as "median"
+data_median <- data_shadow_median %>% 
+  rename_with(~ paste0(.,"_median"), .cols = all_of(impute_vars))
+
+
+# Merge the two datasets by row
+merged_data <- bind_rows(data_mean, data_median)
+
+# Exclude variables containing "_NA" 
+merged_data_filtered <- merged_data[, !grepl("_NA", names(merged_data))]
+
+
+```
+
+
+```{r}
+# Convert the filtered merged_data to a data.table
+dt <- as.data.table(merged_data_filtered)
+
+# Identify columns to include: Only those ending with _not_imputed, _mean, or _median
+melt_cols <- grep("_(not_imputed|mean|median)$", names(dt), value = TRUE)
+
+# Melt the data
+data_long <- melt(dt, measure.vars = melt_cols, variable.name = "var_method", value.name = "value")
+
+# Split 'var_method' into two parts: 'variable' and 'method'
+data_long[, variable := sub("_(not_imputed|mean|median)$", "", var_method)]
+
+data_long[, method := sub(".*_", "", var_method)]
+
+# Convert method to a factor for consistent legend ordering and labels
+data_long[, method := factor(method,
+                             levels = c("imputed", "mean", "median"),
+                             labels = c("Original", "Mean Imputed", "Median Imputed"))]
+
+# Plot the density curves for each variable
+density_plot <- ggplot(as.data.frame(data_long), aes(x = value, colour = method)) +
+  geom_density(size = 1) +
+  facet_wrap(~ variable, scales = "free") +
+  labs(
+    title = "Density Plots for Each Variable by Imputation Method",
+    x = "Value",
+    y = "Density",
+    colour = "Method"
+  ) +
+  theme_minimal()
+
+# Display the plot
+print(density_plot)
+
+```
+
+**Key Findings**
+
+- `PA_TOTAL_SHORT` and `PM_BMI_SR`: The mean-imputed distribution (green) and 
+the median-imputed distribution (blue) show a shift towards higher values. 
+There is a significant imputation effect for both methods, which suggests 
+that mean and median imputation are not suitable methods for this variable.
+
+- `PSE_ADULT_WRK_DURATION`: Median-imputed values align more closely with the 
+original distribution, except for a small imputation effect between 2 and 3.
+Mean-imputed values show a slightly larger imputation effect, ranging from 4 to 9.
+
+- `SDC_AGE_CALC` and `SDC_HOUSEHOLD_ADULTS_NB`: Both the mean and median-imputed 
+distributions align well with the original data.
+
+- `SDC_EDU_LEVEL_AGE`:The original and median-imputed distributions align closely, 
+with a small imputation effect between 22 and 25.Mean-imputed values, however, 
+show a significant imputation effect between 21 and 22.
+
+
+- `SDC_HOUSEHOLD_CHILDREN_NB`: Median-imputed values align better with the original 
+distribution. Mean-imputed values exhibit a small imputation effect at 0.2.
+
+- `SDC_INCOME_IND_NB`: Median-imputed values show better alignment with the 
+original data. Mean-imputed values show a small imputation effect at 2.5.
+
+**Summary**
+
+- Compared to mean imputation, the median-imputed distributions generally align 
+more closely with the original distributions.
+
+- Variables like `PM_BMI_SR` and `SDC_AGE_CALC` show minimal differences between 
+the original and imputed distributions, indicating that the data for these 
+variables can effectively use both mean and median imputation.
+
 
 # Evaluation of Imputation Methods
 ## Compare the imputed datasets by analyzing:
