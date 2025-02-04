@@ -16,6 +16,7 @@ library(mice)
 library(purrr)
 library(dplyr)
 library(data.table)
+library(gridExtra)
 ```
 
 ```{r}
@@ -146,7 +147,7 @@ At this step, we can see that all the missing rates are less than 85%, the varia
 Use the UpSet again help us visuliaze potential patterns in missing data that will 
 give is information about which variables to include or exclude from our missing data model
 ```{r}
-gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
+#gg_miss_upset(select_data_less_85, order.by = "freq", nsets =10)
 ```
 
 **Variables summary**:
@@ -210,19 +211,12 @@ select_data_less_85[cols_to_convert] <- lapply(select_data_less_85[cols_to_conve
 ```
 
 ```{r}
-vis_miss(select_data_less_85, warn_large_data = FALSE)
+#vis_miss(select_data_less_85, warn_large_data = FALSE)
 ```
 
 
 
 # Apply Imputation Methods
-
-## Select and apply at least three different methods for imputing missing data, such as:
-
-  - Mean/Median/Mode imputation.\
-  - K-Nearest Neighbors (KNN) imputation.\
-  - Multiple Imputation by Chained Equations (MICE).
-  
 
 ## Mean/Median/Mode imputation
 
@@ -369,16 +363,95 @@ more closely with the original distributions.
 the original and imputed distributions, indicating that the data for these 
 variables can effectively use both mean and median imputation.
 
+## Multivariate Imputation by Chained Equations (MICE)
 
-# Evaluation of Imputation Methods
-## Compare the imputed datasets by analyzing:
+```{r}
+data_imp <- mice(select_data_less_85, m = 1, maxit = 1)
+saveRDS(data_imp,file="data_imp.rds")
 
-  - Changes in key summary statistics (e.g., means, variances).
-  - The preservation of relationships between variables (e.g., correlations).
-  - Visual comparisons of distributions before and after imputation.
+data_imp_c <- complete(data_imp)
+
+miss_var_summary(select_data_less_85)
+miss_var_summary(data_imp_c)
+
+# data_imp$method
+
+data_imp_complete <- data_imp_c %>%
+  rename_with(~ paste0(., "_com"))
+
+joined_data <- select_data_less_85 %>%
+  left_join(data_imp_complete, by = c("ID" = "ID_com"))
+```
+
+```{r}
+# Example for numeric variables by unsing mice
+variable_pairs <- list(
+  list(original = "SDC_AGE_CALC", imputed = "SDC_AGE_CALC_com"),
+  list(original = "SDC_EDU_LEVEL_AGE", imputed = "SDC_EDU_LEVEL_AGE_com"),
+  list(original = "SDC_INCOME_IND_NB", imputed = "SDC_INCOME_IND_NB_com"),
+  list(original = "SDC_HOUSEHOLD_CHILDREN_NB", imputed = "SDC_HOUSEHOLD_CHILDREN_NB_com"),
+  list(original = "PA_TOTAL_SHORT", imputed = "PA_TOTAL_SHORT_com"),
+  list(original = "PM_BMI_SR", imputed = "PM_BMI_SR_com")
+)
+
+plots <- list()
+
+# Create individual plots for each variable pair
+for (pair in variable_pairs) {
+  original_var <- pair$original
+  imputed_var <- pair$imputed
   
+  # Create the density plot
+  plot <- ggplot(data = joined_data) +
+    geom_density(aes_string(x = original_var, colour = shQuote(original_var)), size = 1) +
+    geom_density(aes_string(x = imputed_var, colour = shQuote(imputed_var)), size = 1) +
+    labs(
+      title = paste("Density Plot for", original_var),
+      x = "Value",
+      y = "Density",
+      colour = "Variable"
+    ) +
+    theme_minimal()
+  
+  # Add the plot to the list
+  plots[[length(plots) + 1]] <- plot
+}
+
+# Arrange the plots in a 2x2 grid
+grid.arrange(grobs = plots, ncol = 2)
+
+```
+
+**Summary:** The `mice` imputation method appears to perform well for the example 
+numeric variables, as most imputed distributions align closely with the original 
+distributions.
+
 # Analysis of Imputed Data
 ## Conduct a simple statistical analysis on the imputed datasets to illustrate the downstream effects of different imputation methods.
+
+Now have an imputation model with some uncertainty and we want to get a pooled regression result the also accounts for the uncertainty
+
+```{r}
+set.seed(123)
+## Typical regression 
+lm_model <- lm(PA_TOTAL_SHORT ~ SDC_INCOME + SDC_EDU_LEVEL_AGE, 
+                data = select_data_less_85)
+## Pooled regression 
+lm_mice <- data_imp %>% with(lm(PA_TOTAL_SHORT ~ SDC_INCOME + SDC_EDU_LEVEL_AGE))
+```
+
+```{r}
+lm_mice_pooled <- pool(lm_mice)
+summary(lm_mice_pooled)
+summary(lm_model)
+```
+
+
+Here we get quite different results from when we don't deal with missing data. 
+
+1. 11936 observations (~ 30%) of the data are deleted due to missing. 
+2. In the pooled model, the standard error is correctly estimated and is smaller 
+than that of the non-imputed data model. 
 
 ##Discuss how the choice of imputation method impacts the analysis results.
 
