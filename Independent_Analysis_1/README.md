@@ -49,4 +49,4 @@ Provide a brief document or section in your `README.md` explaining the dataset, 
 
 ### Analysis Report
 - Provide a concise summary of your data wrangling steps and initial observations.
-- Include visualizatio
+- Include visualization
