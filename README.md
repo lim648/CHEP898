@@ -8,8 +8,8 @@
 | January 29   | Git/GitHub            |
 | February 5   | Missing Data          |
 | February 26  | Independent Analysis 1 |
-| March 19     | Random Forest         |
-| March 26     | Matching              |
+| March 5     | Random Forest         |
+| March 19     | Matching              |
 | April 2      | Independent Analysis 2 |
 
 # Assignment Grading Scheme

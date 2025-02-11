@@ -1,6 +1,6 @@
 ---
 title: "CHEP898_A3:Missing Data"
-author: "Lina"
+author: "Lina Li"
 date: "2025-01-29"
 output: 
   html_document:
@@ -362,6 +362,7 @@ variables can effectively use both mean and median imputation.
 
 ```{r}
 # This model take so much time, I only run one time and save the model result
+# set.seed(123)
 # data_imp <- mice(select_data_less_85, m = 1, maxit = 1) 
 # saveRDS(data_imp,file="data_imp.rds")
 
