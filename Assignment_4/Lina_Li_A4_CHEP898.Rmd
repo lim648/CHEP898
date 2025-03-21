@@ -1,0 +1,31 @@
+---
+title: "CHEP898_A4:Random Forest"
+author: "Lina"
+date: "2025-03-21"
+output: 
+  html_document:
+      keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment Introduction
+
+**Assignment Goal:** Work with the Can Path Student Dataset to perform a Random Forest analysis, conduct detailed hyperparameter tuning, and compare the performance of your model with other models or configurations. This exercise emphasizes building robust models and evaluating their performance critically.
+
+
+**Assignment Objectives:**
+
+-  Develop proficiency in implementing Random Forest algorithms for predictive analysis.
+
+- Understand the importance of hyperparameter tuning and its impact on model performance.
+
+- Gain experience in comparing models to select the best-performing configuration.
+
+- Learn to interpret Random Forest results, including feature importance.
+
+
+
+
