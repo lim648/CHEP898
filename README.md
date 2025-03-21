@@ -21,11 +21,10 @@ You can find the detailed descriptions for all assignments below or in the assig
 | Data Wrangling and Visualization   | 10%     |
 |       GitHub                       | 10%     |
 | Missing Data                       | 15%     |
-| Independent Analysis – Part 1.     | 10%     |
+| Independent Analysis – Part 1.     | 15%     |
 |  Random Forest.                    | 15%     |
-| Scientific Computing/Big Data.     | 10%     |
 | Matching.                         | 15%     |
-|  Independent Analysis – Part 2.    | 15%     |
+|  Independent Analysis – Part 2.    | 20%     |
 | **Total**                          | **100%** |
 
 # Assignment Descriptions
