@@ -8,7 +8,30 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+library(tidyverse)
+library(tidymodels)
+library(sjPlot)
+library(C50)
+library(finalfit)
+library(knitr)
+library(gtsummary)
+library(mlbench)
+library(vip)
+library(rsample)
+library(rpart.plot)
+library(tune)
+library(recipes)
+library(yardstick)
+library(parsnip)
+library(glmnet)
+library(themis)
+library(microbenchmark)
+library(parallel)
+library(skimr) 
+library(corrr)
+library(DescTools)
+
 ```
 
 # Assignment Introduction
@@ -18,7 +41,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 **Assignment Objectives:**
 
--  Develop proficiency in implementing Random Forest algorithms for predictive analysis.
+- Develop proficiency in implementing Random Forest algorithms for predictive analysis.
 
 - Understand the importance of hyperparameter tuning and its impact on model performance.
 
@@ -26,6 +49,395 @@ knitr::opts_chunk$set(echo = TRUE)
 
 - Learn to interpret Random Forest results, including feature importance.
 
+# Loading the data
 
+```{r}
+data <- read_csv("/Users/linali/Documents/Winter_2025/CHEP898_JAN22_2025/mice_all_imp.csv")
+
+data <- data %>% mutate_at(3, factor)
+data <- data %>% mutate_at(5:6, factor)
+data <- data %>% mutate_at(8:12, factor)
+data <- data %>% mutate_at(15:81, factor)
+data <- data %>% mutate_at(83:93, factor)
+
+data$ID <- NULL
+data$ADM_STUDY_ID <- NULL
+```
+
+## Preparing Data
+
+### Preparing Diabetes Data
+
+```{r}
+table(data$DIS_DIAB_EVER)
+
+data <- data %>%
+	mutate(diabetes = case_when(
+		DIS_DIAB_EVER == 0 ~ "No",
+		DIS_DIAB_EVER == 1 ~ "Yes",
+		DIS_DIAB_EVER == 2 ~ "No")) %>%
+		mutate(diabetes = as.factor(diabetes))
+
+data$DIS_DIAB_EVER <- NULL
+```
+
+### Preparing General Health Data
+
+```{r}
+table(data$HS_GEN_HEALTH)
+
+### Combining levels 1 and 2 just to have enough sample. We won't do upscaling for this example
+data <- data %>%
+	mutate(gen_health = case_when(
+		HS_GEN_HEALTH == 1 ~ 1,
+		HS_GEN_HEALTH == 2 ~ 1,
+		HS_GEN_HEALTH == 3 ~ 2,
+		HS_GEN_HEALTH == 4 ~ 3,	
+		HS_GEN_HEALTH == 5 ~ 4)) %>%
+		mutate(gen_health = as.factor(gen_health))
+
+data$HS_GEN_HEALTH <- NULL
+```
+```
+glimpse(data) 
+```
+### Exploratory data analysis (EDA)
+
+```{r}
+skimr::skim(data)
+```
+
+There are a total of **86** factor variables and **5** numeric variables in the dataset. 
+There are no missing values. Among the factor variables, 8 variables include the 
+level **-7**, which represents "Not Applicable". These variables are:\
+
+- __HS_PSA_EVER__: Indicates whether the **male** participant has ever had a PSA 
+  blood test for prostate cancer screening.
+
+- __WH_CONTRACEPTIVES_EVER__: Indicates whether the **female** participant has 
+  ever used hormonal contraceptives.
+
+- __WH_HFT_EVER__: Indicates whether the **female** participant has ever received 
+  hormone fertility treatment.
+
+- __WH_MENOPAUSE_EVER__: Indicates whether the **female** participant has 
+  experienced menopause.
+
+- __WH_HRT_EVER__: Indicates whether the **female** participant has ever used 
+  hormone replacement therapy.
+
+- __WH_HYSTERECTOMY_EVER__: Indicates whether the **female** participant has had 
+  a hysterectomy.
+
+- __SMK_CIG_WHOLE_EVER__: Indicates whether the participant has ever smoked a whole 
+cigarette, even if they haven’t smoked more than 100 cigarettes in their lifetime.
+
+- __WRK_SCHEDULE_CUR_CAT__: Work schedule type. 
+
+At this point, among the 8 factor variables with the -7 level, **5** are related 
+specifically to **females**. It is likely that the -7 values in these variables 
+indicate male participants, for whom these variables are not applicable.
+
+My following research question in this study focuses on **female** participants, 
+I will restrict the dataset to **females** only for the remainder of the analysis.
+The variable __HS_PSA_EVER__, which applies only to males, will be excluded.
+However, __WRK_SCHEDULE_CUR_CAT__ will be retained for analysis as it is relevant 
+regardless of gender.
+
+```{r}
+# # Filter to keep only female participants and Remove male-specific variable
+female_data <- data %>%
+  filter(SDC_GENDER == 2) %>%
+  select(-SDC_GENDER,-HS_PSA_EVER)
+```
+
+
+```{r}
+numeric_data <- female_data %>%
+  select(where(is.numeric))
+
+cor_data <- numeric_data %>%
+  correlate()
+
+cor_data
+
+rplot(cor_data, colours = c("indianred2", "black", "skyblue1")) +
+  theme(axis.text.x = element_text(angle = 15, hjust = 1))
+```
+
+As seen from the above table and figure, the variable __SDC_AGE_CALC__ and 
+__PSE_ADULT_WRK_DURATION__ have a moderate positive relationship. All other 
+correlations range between −0.05 and 0.11, indicating weak or negligible relationships.
+
+```{r}
+female_data %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(everything()) %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 30, fill = "skyblue", color = "white") +
+  facet_wrap(~name, scales = "free") +
+  labs(title = "Distribution of Numeric Features")
+
+# Boxplot to find outliers
+female_data %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(everything()) %>%
+  ggplot(aes(x = name, y = value)) +
+  geom_boxplot(fill = "lightpink") +
+  facet_wrap(~name, scales = "free") +
+  labs(title = "Boxplot of Numeric Variables")
+
+```
+
+As show on the above hist and boxplot, there are some skew and outlier from each
+varialbe.
+
+- __PA_TOTAL_SHORT__:\
+  - Histogram: Highly right-skewed with a long tail beyond 10,000.\
+  - Boxplot: Many high-value outliers.\
+  - Apply log-transformation to reduce skew.
+
+- __PM_BMI_SR__:\
+  - Histogram: Moderately right-skewed.\
+  - Boxplot: Some extreme values.\
+  - Keep them, because those values may be plausible (e.g., obesity).
+
+- __PSE_ADULT_WRK_DURATION__:\
+  - Histogram: Extremely skewed right; most values are close to 0.\
+  - Boxplot: Several very large outliers.\
+  _ Model it as categorical (None/Short/Long)
+  
+- __SDC_AGE_CALC__:\
+  - Histogram: Fairly uniform to bell-shaped.\
+  - Boxplot: Slight spread but no serious outliers.\
+  - No transformation needed.
+
+- __SDC_EDU_LEVEL_AGE__:
+  - Histogram: Right-skewed, clustered in early adulthood but with long tail up to 70+.\
+  - Boxplot: Some outliers in high values.\
+  - Capping top values (age > 60 may indicate data entry error).
+
+
+```{r}
+# PA_TOTAL_SHORT
+female_data$PA_TOTAL_SHORT <- log(female_data$PA_TOTAL_SHORT)
+
+# PSE_ADULT_WRK_DURATION
+female_data <- female_data %>%
+  mutate(WRK_DURATION_CAT = case_when(
+    PSE_ADULT_WRK_DURATION == 0 ~ "None",
+    PSE_ADULT_WRK_DURATION > 0 & PSE_ADULT_WRK_DURATION <= 5 ~ "Short",
+    PSE_ADULT_WRK_DURATION > 5 ~ "Long"
+  )) %>%
+  mutate(WRK_DURATION_CAT = factor(WRK_DURATION_CAT,
+                                    levels = c("None", "Short", "Long")))
+
+female_data$PSE_ADULT_WRK_DURATION <- NULL
+
+# SDC_EDU_LEVEL_AGE
+female_data <- female_data %>% filter(SDC_EDU_LEVEL_AGE <= 60)
+```
+
+# Fit the Model
+
+```{r}
+set.seed(10)
+
+# Cross Validation Split
+cv_split <- initial_validation_split(data, 
+                            strata = gen_health, 
+                            prop = c(0.70, 0.20))
+
+# Create data frames for the two sets:
+train_data <- training(cv_split)
+test_data  <- testing(cv_split)
+```
+
+
+```{r}
+# Set the number of cores on your computer
+cores <- parallel::detectCores()
+```
+
+## Recipe
+```{r}
+health_recipe <- recipe(gen_health ~ ., data = train_data) %>%
+  step_zv(all_predictors())
+```
+
+## Baseline RF model
+
+```{r}
+rf_model <- rand_forest() %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+# Baseline Workflow
+baseline_workflow <- 
+  workflow() %>%
+  add_model(rf_model) %>%
+  add_recipe(health_recipe)
+
+# Fit on training data
+baseline_fit <- 
+  baseline_workflow %>%
+  fit(data = train_data)
+
+# Predict on test data
+baseline_preds <- predict(baseline_fit, test_data, type = "class") %>%
+  bind_cols(test_data)
+```
+
+
+## Tuned RF model 
+
+```{r}
+tuning_rf_model <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) %>% 
+              set_engine("ranger", num.threads = cores) %>% 
+              set_mode("classification")
+
+tuning_health_workflow <- workflow() %>%
+  add_model(tuning_rf_model) %>%
+  add_recipe(health_recipe)
+
+```
+
+
+```{r}
+set.seed(100)
+
+folds <- vfold_cv(train_data, v = 10, strata = gen_health) 
+
+rf_grid <- grid_regular(
+              mtry(range = c(5, 50)),
+              min_n(range = c(5, 30)),
+              levels = 5  
+            )
+
+```
+
+```{r, eval=TRUE, echo=FALSE, results='hide'}
+health_fit <- readRDS("health_fit.rds")
+```
+
+```{r, echo=TRUE, eval=FALSE}
+health_fit <- tune_grid(
+                tuning_health_workflow,
+                resamples = folds,
+                grid = rf_grid, 
+                control = control_resamples(save_pred = TRUE, 
+                                                  verbose = TRUE))
+```                                                  
+
+```{r}
+health_fit
+```
+
+```{r}
+health_fit %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  labs(y = "Accuracy")
+```
+
+Key Finding: The best performance is achieved when mtry is **38**, and min_n is **5**.
+
+### Tuned Final model
+
+```{r}
+rf_best<- health_fit %>% select_best(metric = "accuracy")
+rf_best
+
+rf_auc_fit <- 
+  health_fit %>% 
+  collect_predictions(parameters = rf_best) 
+
+final_model <- finalize_model(tuning_rf_model,rf_best)
+
+final_model
+```
+
+### Fit Tuned Final Model
+
+```{r}
+final_rf_workflow <- workflow() %>%
+                      add_recipe(health_recipe) %>%
+                      add_model(final_model)
+
+final_results <- final_rf_workflow %>%
+                    last_fit(cv_split)
+
+final_results %>%
+  collect_metrics()
+```
+
+# Model Comparisons
+
+```{r}
+# Metrics for baseline model
+baseline_metrics <- tibble(
+  Model = "Baseline RF",
+  Accuracy = accuracy(baseline_preds, truth = gen_health, estimate = .pred_class)$.estimate,
+  Sensitivity = sens(baseline_preds, truth = gen_health, estimate = .pred_class)$.estimate,
+  Specificity = spec(baseline_preds, truth = gen_health, estimate = .pred_class)$.estimate,
+  F1 = f_meas(baseline_preds, truth = gen_health, estimate = .pred_class)$.estimate
+)
+
+# Metrics for final tuned model
+final_metrics <- tibble(
+  Model = "Tuned RF",
+  Accuracy = accuracy(rf_auc_fit, truth = gen_health, estimate = .pred_class)$.estimate,
+  Sensitivity = sens(rf_auc_fit, truth = gen_health, estimate = .pred_class)$.estimate,
+  Specificity = spec(rf_auc_fit, truth = gen_health, estimate = .pred_class)$.estimate,
+  F1 = f_meas(rf_auc_fit, truth = gen_health, estimate = .pred_class)$.estimate
+)
+
+comparison_table <- bind_rows(baseline_metrics, final_metrics)
+
+comparison_table
+
+```
+
+As shown in the table above, the tuned Random Forest model performs slightly better 
+than the baseline model across all key metrics: accuracy, sensitivity, specificity, 
+and F1 score. Although the improvements are modest, they suggest that hyperparameter 
+tuning provided a marginal performance boost. These small gains may still hold 
+practical value, especially in sensitive domains such as health prediction or 
+medical screening, where even a minor increase in model performance can translate 
+to improved outcomes or earlier interventions. However, it's important to consider 
+the computational cost of tuning, particularly when working with large datasets, 
+and weigh it against the relatively small improvement in model performance.
+
+
+# Variable Importance
+
+```{r}
+tree_prep <- prep(health_recipe)
+
+final_model %>%
+  set_engine("ranger", importance = "permutation") %>%
+  fit(gen_health ~ .,
+    data = juice(tree_prep)) %>%
+  vip(geom = "point")
+```
+
+The plot above shows the top 10 most important variables from the final model based 
+on the **female-only** dataset. The variables __PM_BMI_SR__, __PA_TOTAL_SHORT__, and 
+__DIS_HBP_EVER__ are the most predictive for general health status. BMI is the 
+most influential predictor, with higher BMI likely associated with poorer perceived 
+general health among females. Physical activity level is strongly linked to perceived 
+health, meaning that greater activity is generally associated with better health. 
+High blood pressure status is also a key chronic condition that influences health perception.
+
+Socioeconomic factors such as __SDC_EDU_LEVEL__ and __SDC_INCOME__ play significant 
+roles, reflecting known social determinants of health—both education level and income 
+are strongly correlated with health outcomes. The variable __WRK_UNABLE__, which indicates 
+inability to work due to health reasons, is a direct indicator of compromised health status.
+
+Variables such as __SDC_AGE_CALC__, __SDC_EDU_LEVEL_AGE__, __diabetes__, and __DIS_ARTHRITIS_EVER__ are ranked lower in importance but remain relevant to general health. Interestingly, __diabetes__ appears less important in this model, possibly due to overlapping effects with BMI or low variability in this subgroup.
 
 
