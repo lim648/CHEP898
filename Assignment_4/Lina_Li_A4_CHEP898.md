@@ -24,6 +24,10 @@ output:
 
 - Learn to interpret Random Forest results, including feature importance.
 
+**My research question**:
+
+- Can we develop a model to predict general health status for females?
+
 # Loading the data
 
 
