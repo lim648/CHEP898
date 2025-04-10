@@ -1,0 +1,238 @@
+---
+title: 'CHEP898_A5: Matching'
+author: "Lina"
+date: "2025-03-31"
+output: 
+  html_document:
+      keep_md: true
+---
+
+```{r setup, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(adjustedCurves)
+library(boot)
+library(broom)
+library(geepack)
+library(here)
+library(MatchIt)
+library(tableone)
+library(sjPlot)
+library(survey)
+library(episensr) 
+library(epitools)
+library(gtsummary)
+library(cobalt)
+library(cowplot)
+library(geepack)
+library(WeightIt)
+```
+
+# Assignment Introduction
+
+**Assignment Goal:** Work with the Can Path Student Dataset to perform a Machine Learning-based Matching Analysis. This assignment will require student to apply a machine learning approach to match cases and controls (or equivalent groups), analyze the quality of the matches, and interpret the results.
+
+
+**Assignment Objectives:**
+
+- Learn to apply machine learning algorithms for matching analysis.
+
+- Develop skills in preprocessing and feature engineering for matching.
+
+- Assess the quality of matches using statistical and visual methods.
+
+- Interpret and report findings from a matching analysis.
+
+**My research question**:
+
+- __Does working full-time (treatment) associate with arthritis in our sample?__
+
+
+# Loading the data
+
+```{r}
+data <- read_csv("/Users/linali/Documents/Winter_2025/CHEP898_JAN22_2025/mice_all_imp.csv")
+
+data <- data %>% mutate_at(3, factor)
+data <- data %>% mutate_at(5:6, factor)
+data <- data %>% mutate_at(8:12, factor)
+data <- data %>% mutate_at(15:81, factor)
+data <- data %>% mutate_at(83:93, factor)
+
+data$ID <- NULL
+data$ADM_STUDY_ID <- NULL
+```
+
+## Prepar Data
+
+### Arthritis
+
+Arthritis = 0 (No Arthritis ever), Arthritis = 1 (Yes Arthritis ever)
+
+```{r}
+table(data$DIS_ARTHRITIS_EVER)
+
+data <- data %>%
+	mutate(arthritis = case_when(
+		DIS_ARTHRITIS_EVER == 0 ~ 0,
+		DIS_ARTHRITIS_EVER == 1 ~ 1,
+		DIS_ARTHRITIS_EVER == 2 ~ 0)) %>%
+		mutate(arthritis = as.factor(arthritis))
+
+table(data$DIS_ARTHRITIS_EVER, data$arthritis)
+
+data$DIS_ARTHRITIS_EVER <- NULL
+```
+
+
+### Full_time Data
+
+full_time = 0 (Not full-time employed/self-employed)
+
+full_time = 1 (Yes full-time employed/self-employed)
+
+```{r}
+table(data$WRK_FULL_TIME)
+
+data <- data %>%
+	mutate(full_time = case_when(
+		WRK_FULL_TIME == 0 ~ 0,
+		WRK_FULL_TIME == 1 ~ 1)) %>%
+		mutate(full_time = as.factor(full_time))
+
+table(data$WRK_FULL_TIME, data$full_time)
+
+data$WRK_FULL_TIME <- NULL
+```
+# Model
+
+## Unadjusted / Non-matched Models
+
+```{r}
+table(data$full_time, data$arthritis)
+```
+
+```{r}
+#### Epi tools method
+fulltime <- c("No", "Yes")
+outcome <- c("Case", "Control")
+dat <- matrix(c(5994, 12886, 4307, 18000),2,2,byrow=TRUE)
+dimnames(dat) <- list("Arthritis" = fulltime, "Outcome" = outcome)
+oddsratio(dat, rev="c")
+
+#### Logistic regression
+lr <- glm(arthritis ~ full_time, data = data, family = "binomial")
+
+tab_model(lr)
+```
+
+The naive analysis suggests that individuals who are employed full-time have 0.514 times the odds of having arthritis compared to those who do not work full-time.
+
+## Define Closeness
+
+Define variables are associated with the treatment (Full time employed) in order to create a model that can help us define what causes treatment. General rule we want to include more variables than less in our propensity score.
+
+- __WRK_PART_TIME__: Indicator of whether the participant is currently employed part-time (paid employment or self-employed). Part time means less than 30 houurs per week
+
+- __WRK_STUDENT__: Indicator of whether the participant is currently a student.
+
+- __WRK_EMPLOYMENT__: Indicator of whether the participant currently has paid employment or is self-employed (including full-time and part time status).
+
+- __SDC_GENDER__: Gender of the participant.
+
+- __SDC_EDU_LEVEL__: Highest level of education completed by the participant.
+
+- __SDC_INCOME__: Average annual income, before taxes, of the participant's entire household including salaries, pensions, and allowances.
+
+- __HS_DENTAL_VISIT_EVER__: Indicator of whether the participant has ever had a dental professional visit.
+
+- __DIS_DIAB_EVER__: Occurrence of diabetes at any point during the life of the participant.
+
+- __DIS_CANCER_EVER__: Occurrence of cancer at any point during the life of the participant.
+
+- __DIS_DEP_EVER__: Occurrence of major depression at any point during the life of the participant.
+
+- __PA_TOTAL_SHORT__: Quantitative indicator of global physical activity in metabolic equivalent (MET)-minutes per week (IPAQ short form).Total physical activity MET-minutes/week = sum of Walking + Moderate + Vigorous MET-minutes/week scores.
+
+- __SMK_CIG_EVER__: Indicator of whether the participant has ever smoked at least 100 cigarettes during his lifetime.
+
+- __SDC_HOUSEHOLD_ADULTS_NB__: Number of adults (age 18 or older) currently living in the same household including the participant.
+
+- __SDC_HOUSEHOLD_CHILDREN_NB__: Number of children (under 18 years of age) currently living in the participant's household.
+
+- __PM_BMI_SR__: Weight (in kg) divided by height (in m) squared.
+
+
+### Summary statistics of baseline variables by treatment status
+
+```{r}
+covariates <- select(data, WRK_PART_TIME,WRK_EMPLOYMENT, WRK_STUDENT, SDC_INCOME, SDC_EDU_LEVEL, SDC_GENDER,HS_DENTAL_VISIT_EVER, DIS_DIAB_EVER,DIS_CANCER_EVER, DIS_DEP_EVER,PA_TOTAL_SHORT,SMK_CIG_EVER, SDC_HOUSEHOLD_ADULTS_NB,SDC_HOUSEHOLD_CHILDREN_NB  )
+baselines <- colnames(covariates)
+baselines
+
+tab_baseline <- CreateTableOne(vars = baselines,
+                       data = data, 
+                       strata = "full_time", 
+                       test = FALSE, #mute P-value calculation;
+                       smd = TRUE,
+                       addOverall = TRUE)
+
+kableone(tab_baseline, smd = TRUE, showAllLevels = FALSE )
+```
+
+## Naive Regression
+
+If we were not doing matching we would adjust the treatment variable & covariates as in a typical regression analysis. 
+
+```{r}
+fit_naive <- glm(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + DIS_DEP_EVER + PA_TOTAL_SHORT + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + SDC_HOUSEHOLD_CHILDREN_NB, family = "binomial", data = data)
+
+tab_model(fit_naive)
+```
+
+## Matching Nearest Neighbour
+
+```{r}
+kkn_1_1 <- matchit(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + DIS_DEP_EVER + PA_TOTAL_SHORT + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + SDC_HOUSEHOLD_CHILDREN_NB, data = data,
+               method = "nearest",
+               distance = "glm")
+summary(kkn_1_1, un = FALSE)
+
+```
+
+```{r}
+knn_data <- match.data(kkn_1_1)
+```
+
+### Histogram of the propensity score
+```{r}
+ggplot(data = knn_data, aes(distance)) + 
+        geom_histogram()
+```
+
+```{r}
+head(kkn_1_1$match.matrix)
+```
+
+```{r}
+love_knn <- love.plot(kkn_1_1, 
+          binary = "std", 
+          grid = TRUE,
+          thresholds = c(m = .1),
+          colors = c("red","blue"))  
+
+plot(love_knn)
+```
+```{r}
+bal.plot(kkn_1_1,
+         var.name="distance",
+         which="both",
+         type = "density",
+         colors = c("red","blue"))
+```
+
+```{r}
+plot(kkn_1_1, type = "density", interactive = FALSE,
+     which.xs = ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + DIS_DEP_EVER + PA_TOTAL_SHORT + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + SDC_HOUSEHOLD_CHILDREN_NB)
+```
+
