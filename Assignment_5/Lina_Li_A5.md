@@ -607,14 +607,14 @@ ggplot(data = knn_data, aes(x = distance, fill = as.factor(full_time))) +
 
 **Finding:**
 
-- Different distributions:\
+- Different distributions:
    - The full-time group tends to have lower propensity scores, mostly clustering 
    between 0.1 and 0.4.
    - The pink group (non-full-time workers) has scores spread more toward the right, 
    especially in the 0.25 to 0.55 range.
 
-- Overlap exists:\
-   - There is considerable overlap between the two groups in the 0.15 to 0.4 range.\
+- Overlap exists:
+   - There is considerable overlap between the two groups in the 0.15 to 0.4 range.
    - This is important because it indicates common support, meaning there's a region 
    where both groups have similar scores, and thus can be fairly compared after matching.
 
@@ -878,9 +878,9 @@ plot_grid(love_full, love_knn, ncol = 1, nrow = 2, labels = c('Full', 'KNN'))
 
 **Finding for both Plot:** 
 
-- Before Matching (Red): \
+- Before Matching (Red): 
    - Many red dots fall outside the ±0.1 bounds, showing substantial imbalance 
-   between groups on several covariates.\
+   between groups on several covariates.
    - This includes variables like __WRK_PART_TIME__, __WRK_EMPLOYMENT__, and 
    __SDC_INCOME6/7__,which are highly imbalanced before matching.
    
@@ -915,14 +915,14 @@ p2 <- bal.plot(kkn_1_1,
 
 **Finding for both Plot:**
 
-- Unadjusted Panels (Left side of both rows):\
-   - Noticeable separation between the red and blue curves.\
+- Unadjusted Panels (Left side of both rows):
+   - Noticeable separation between the red and blue curves.
    - This means that before matching, treated and control units had different 
    distributions of propensity scores.
    
-- Adjusted Panels (Right side of both rows):\
-   - The red and blue curves almost completely overlap in both Full and KNN methods.\
-   - This indicates that matching successfully balanced the distribution of propensity scores.\
+- Adjusted Panels (Right side of both rows):
+   - The red and blue curves almost completely overlap in both Full and KNN methods.
+   - This indicates that matching successfully balanced the distribution of propensity scores.
    - The Full method appears to have slightly better balance than KNN methods.
 
 
@@ -1016,14 +1016,14 @@ summary(IPTW)
 
 **Finding:**
 
--  Weight Ranges:\
+-  Weight Ranges:
    - Treated group (1): Weights range from 0.3289 to 4.2523.
    - Control group (0): Weights range from 0.7499 to 2.9002.
 
-- Effective Sample Size (ESS):\
-   - Unweighted: 30,886 controls, 10,301 treated.\
-   - Weighted ESS:\
-     - Control: 29,967 (very close to full size, good overlap).\
+- Effective Sample Size (ESS):
+   - Unweighted: 30,886 controls, 10,301 treated.
+   - Weighted ESS:
+     - Control: 29,967 (very close to full size, good overlap).
      - Treated: 8,130.72.
 
 
@@ -1042,13 +1042,13 @@ bal.plot(IPTW,
 ![](Lina_Li_A5_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 **Findings:**
 
-- Unadjusted Sample (Left Panel): \
-  - Noticeable separation between the red and blue curves.\
+- Unadjusted Sample (Left Panel): 
+  - Noticeable separation between the red and blue curves.
   - This indicates that before weighting, the two groups had different distributions
   of propensity scores, meaning they differed systematically on observed covariates.
   
-- Adjusted Sample (Right Panel):\
-  - After IPTW is applied, the red and blue curves almost completely overlap.\
+- Adjusted Sample (Right Panel):
+  - After IPTW is applied, the red and blue curves almost completely overlap.
   - This shows that IPTW successfully balanced the covariate distributions between 
   treated and control groups.
 
