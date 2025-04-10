@@ -1644,7 +1644,7 @@ tab_model(fit_naive, fit_no_cov, model_iptw)
 
 </table>
 
-**Summary of Results Across Three Models: ** Across all three models: Naive Logistic 
+**Summary of Results Across Three Models:** Across all three models: Naive Logistic 
 Regression, GEE with Full Matching Weights, and IPTW, we examine the association 
 between full-time employment and the likelihood of having arthritis. In the naive 
 model, which adjusts for covariates, full-time employment is significantly associated 
