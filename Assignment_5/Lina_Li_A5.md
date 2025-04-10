@@ -179,7 +179,7 @@ table(data$full_time, data$arthritis)
 
 
 ``` r
-#### Epi tools method
+# Epi tools method
 fulltime <- c("No", "Yes")
 outcome <- c("Case", "Control")
 dat <- matrix(c(5994, 12886, 4307, 18000),2,2,byrow=TRUE)
@@ -215,7 +215,7 @@ oddsratio(dat, rev="c")
 ```
 
 ``` r
-#### Logistic regression
+# Logistic regression
 lr <- glm(arthritis ~ full_time, data = data, family = "binomial")
 
 tab_model(lr)
@@ -615,8 +615,8 @@ ggplot(data = knn_data, aes(x = distance, fill = as.factor(full_time))) +
 
 - Overlap exists:\
    - There is considerable overlap between the two groups in the 0.15 to 0.4 range.\
-   - his is important because it indicates common support, meaning there's a region 
-   where both groups have similar scores — and thus can be fairly compared after matching.
+   - This is important because it indicates common support, meaning there's a region 
+   where both groups have similar scores, and thus can be fairly compared after matching.
 
 
 
@@ -631,7 +631,7 @@ plot(kkn_1_1, type = "jitter", interactive = FALSE)
 - The two distributions (matched treated vs. matched control) look very similar.
 
 - Some individuals from both the treated and control groups with very low or very 
-high propensity scores were not matched (you see this in the "unmatched" rows).
+high propensity scores were not matched.
 
 - The plot shows that after matching, the distribution of propensity scores for 
 treated and control units is well-aligned, indicating that the matching procedure 
@@ -647,6 +647,7 @@ plot(kkn_1_1, type = "density", interactive = FALSE,
 ```
 
 ![](Lina_Li_A5_files/figure-html/unnamed-chunk-11-1.png)<!-- -->![](Lina_Li_A5_files/figure-html/unnamed-chunk-11-2.png)<!-- -->![](Lina_Li_A5_files/figure-html/unnamed-chunk-11-3.png)<!-- -->![](Lina_Li_A5_files/figure-html/unnamed-chunk-11-4.png)<!-- -->![](Lina_Li_A5_files/figure-html/unnamed-chunk-11-5.png)<!-- -->
+
 **Finding:** Imbalances are represented by the differences between the black (treated) 
 and gray (control) distributions. We can see all the variables appear to have improved 
 balance after matching.
@@ -813,7 +814,7 @@ full_data <- match.data(full)
 **Finding:** Here we applied generalized full matching and successfully retained 
 all 10,301 treated individuals (full_time) while utilizing all 30,886 control 
 individuals (not full_time). However, through weighting, the ESS of the control 
-group was reduced to 10,459.82, making it more comparable to the treated group. 
+group was reduced to 10828.1, making it more comparable to the treated group. 
 We can see that the SMD is much better for the matched data compared to the 
 treatment/control comparison we did previously. This suggests that the matching procedure 
 effectively reduced bias and created a more valid comparison for estimating the 
@@ -927,6 +928,10 @@ p2 <- bal.plot(kkn_1_1,
 
 ## Analysis of the outcome and estimation of the treatment effect
 
+We can then model the outcome in this dataset using the standard regression 
+functions in R, like lm() or glm(), being sure to include the matching weights 
+(stored in the weights variable of the match.data() output) in the estimation.
+
 ### Regression no covariates
 
 
@@ -950,9 +955,6 @@ full_data <- full_data %>%
 
 ### GEE regresion 
 
-Why do we need to do a GEE regression in this context? What's happening with the 
-matches and what are we doing? 
-
 
 ``` r
 fit_no_cov <- geeglm(arthritis ~ full_time, family=binomial("log"), 
@@ -962,49 +964,11 @@ fit_no_cov <- geeglm(arthritis ~ full_time, family=binomial("log"),
               id=subclass, #### Group by subclasses
               corstr="independence") #### Specify correlation structure
 
-tab_model(fit_no_cov)
+# tab_model(fit_no_cov) # showing the result at the last section
 ```
 
-```
-## Profiled confidence intervals may take longer time to compute.
-##   Use `ci_method="wald"` for faster computation of CIs.
-```
 
-<table style="border-collapse:collapse; border:none;">
-<tr>
-<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">arthritis</th>
-</tr>
-<tr>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Risk Ratios</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.25</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.24&nbsp;&ndash;&nbsp;0.25</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">full time [1]</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.03</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.99&nbsp;&ndash;&nbsp;1.08</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.098</td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>subclass</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">6792</td>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">41187</td>
-</tr>
-
-</table>
-
-### Inverse probability of treatment weighting (IPTW)
+## Inverse probability of treatment weighting (IPTW)
 
 
 ``` r
@@ -1050,6 +1014,19 @@ summary(IPTW)
 ## Weighted   29971.11  8131.53
 ```
 
+**Finding:**
+
+-  Weight Ranges:\
+   - Treated group (1): Weights range from 0.3289 to 4.2523.
+   - Control group (0): Weights range from 0.7499 to 2.9002.
+
+- Effective Sample Size (ESS):\
+   - Unweighted: 30,886 controls, 10,301 treated.\
+   - Weighted ESS:\
+     - Control: 29,967 (very close to full size, good overlap).\
+     - Treated: 8,130.72.
+
+
 
 ``` r
 bal.plot(IPTW,
@@ -1063,79 +1040,17 @@ bal.plot(IPTW,
 ```
 
 ![](Lina_Li_A5_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+**Findings:**
 
-``` r
-bal.tab(IPTW, un=TRUE, thresholds = c(m=0.1))
-```
-
-```
-## Balance Measures
-##                                  Type Diff.Un Diff.Adj    M.Threshold
-## prop.score                   Distance  0.6198   0.0039 Balanced, <0.1
-## full_time                      Binary -0.1647  -0.0005 Balanced, <0.1
-## WRK_PART_TIME                  Binary  0.0168   0.0010 Balanced, <0.1
-## WRK_EMPLOYMENT                 Binary -0.1431  -0.0022 Balanced, <0.1
-## WRK_STUDENT                    Binary -0.0008   0.0002 Balanced, <0.1
-## SDC_INCOME_1                   Binary  0.0012  -0.0000 Balanced, <0.1
-## SDC_INCOME_2                   Binary  0.0228   0.0001 Balanced, <0.1
-## SDC_INCOME_3                   Binary  0.0590   0.0005 Balanced, <0.1
-## SDC_INCOME_4                   Binary  0.0293  -0.0033 Balanced, <0.1
-## SDC_INCOME_5                   Binary -0.0130  -0.0025 Balanced, <0.1
-## SDC_INCOME_6                   Binary -0.0507   0.0016 Balanced, <0.1
-## SDC_INCOME_7                   Binary -0.0301   0.0037 Balanced, <0.1
-## SDC_INCOME_8                   Binary -0.0185   0.0001 Balanced, <0.1
-## SDC_EDU_LEVEL_0                Binary  0.0007   0.0001 Balanced, <0.1
-## SDC_EDU_LEVEL_1                Binary  0.0086   0.0003 Balanced, <0.1
-## SDC_EDU_LEVEL_2                Binary  0.0504   0.0018 Balanced, <0.1
-## SDC_EDU_LEVEL_3                Binary  0.0183   0.0019 Balanced, <0.1
-## SDC_EDU_LEVEL_4                Binary  0.0077   0.0008 Balanced, <0.1
-## SDC_EDU_LEVEL_5                Binary  0.0039  -0.0013 Balanced, <0.1
-## SDC_EDU_LEVEL_6                Binary -0.0705  -0.0051 Balanced, <0.1
-## SDC_EDU_LEVEL_7                Binary -0.0190   0.0015 Balanced, <0.1
-## SDC_GENDER_2                   Binary  0.0789  -0.0043 Balanced, <0.1
-## HS_DENTAL_VISIT_EVER           Binary  0.0001  -0.0001 Balanced, <0.1
-## DIS_DIAB_EVER_0                Binary -0.0543  -0.0035 Balanced, <0.1
-## DIS_DIAB_EVER_1                Binary  0.0482   0.0028 Balanced, <0.1
-## DIS_DIAB_EVER_2                Binary  0.0061   0.0007 Balanced, <0.1
-## DIS_CANCER_EVER                Binary  0.0759   0.0020 Balanced, <0.1
-## DIS_DEP_EVER_0                 Binary -0.0823  -0.0032 Balanced, <0.1
-## DIS_DEP_EVER_1                 Binary  0.0755   0.0031 Balanced, <0.1
-## DIS_DEP_EVER_2                 Binary  0.0067   0.0002 Balanced, <0.1
-## SMK_CIG_EVER                   Binary  0.0922   0.0057 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_1      Binary  0.0358  -0.0020 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_2      Binary -0.0296  -0.0082 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_3      Binary -0.0045   0.0062 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_4      Binary -0.0023   0.0029 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_5      Binary  0.0013   0.0012 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_6      Binary -0.0004  -0.0000 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_7      Binary -0.0002   0.0002 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_8      Binary -0.0001  -0.0001 Balanced, <0.1
-## SDC_HOUSEHOLD_ADULTS_NB_21     Binary -0.0000  -0.0000 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_0    Binary  0.1643  -0.0002 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_1    Binary -0.0551   0.0004 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_2    Binary -0.0862  -0.0024 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_3    Binary -0.0205   0.0022 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_4    Binary -0.0024   0.0000 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_5    Binary  0.0002   0.0001 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_6    Binary  0.0000   0.0001 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_7    Binary -0.0003  -0.0002 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_9    Binary -0.0000   0.0000 Balanced, <0.1
-## SDC_HOUSEHOLD_CHILDREN_NB_10   Binary -0.0000  -0.0000 Balanced, <0.1
-## 
-## Balance tally for mean differences
-##                    count
-## Balanced, <0.1        50
-## Not Balanced, >0.1     0
-## 
-## Variable with the greatest mean difference
-##                   Variable Diff.Adj    M.Threshold
-##  SDC_HOUSEHOLD_ADULTS_NB_2  -0.0082 Balanced, <0.1
-## 
-## Effective sample sizes
-##             Control  Treated
-## Unadjusted 30886.   10301.  
-## Adjusted   29971.11  8131.53
-```
+- Unadjusted Sample (Left Panel): \
+  - Noticeable separation between the red and blue curves.\
+  - This indicates that before weighting, the two groups had different distributions
+  of propensity scores, meaning they differed systematically on observed covariates.
+  
+- Adjusted Sample (Right Panel):\
+  - After IPTW is applied, the red and blue curves almost completely overlap.\
+  - This shows that IPTW successfully balanced the covariate distributions between 
+  treated and control groups.
 
 
 ``` r
@@ -1145,7 +1060,7 @@ model_iptw <- glm_weightit(arthritis ~ full_time,
             data = data)
 ```
 
-## All models together
+## Summary of Results for the Three Main Models
 
 
 ``` r
@@ -1728,3 +1643,31 @@ tab_model(fit_naive, fit_no_cov, model_iptw)
 </tr>
 
 </table>
+
+**Summary of Results Across Three Models: ** Across all three models: Naive Logistic 
+Regression, GEE with Full Matching Weights, and IPTW, we examine the association 
+between full-time employment and the likelihood of having arthritis. In the naive 
+model, which adjusts for covariates, full-time employment is significantly associated 
+with reduced odds of arthritis (OR = 0.70, 95% CI: 0.65–0.75, $p <$ 0.001). However, 
+in the GEE model, which accounts for matched weights without covariates, the effect 
+estimate attenuates (RR = 1.03, 95% CI: 0.99–1.08, $p =$ 0.098), suggesting no significant 
+association after controlling for confounding through matching. Similarly, in the 
+IPTW model, the effect is null (OR = 1.00, 95% CI: 0.98–1.01, $p =$ 0.785), indicating 
+that the initial observed association may have been confounded by covariates. 
+These findings demonstrate how adjusting for observed covariates via matching or 
+weighting can dramatically change the interpretation of treatment effects, highlighting 
+the importance of accounting for confounding in observational studies.
+
+# Conclusion
+In our sample, the initial naive logistic regression suggested that individuals who 
+work full-time were **significantly** less likely to have arthritis. However, after 
+adjusting for potential confounders using propensity score methods, including full 
+matching (GEE model) and inverse probability of treatment weighting (IPTW), 
+this association was **no longer statistically significant**. These adjusted models 
+indicate that the observed relationship in the naive model was likely due to 
+confounding factors such as socioeconomic status, health history, and others. 
+Therefore, after properly accounting for these covariates, we conclude that there 
+is no strong evidence of an independent association between full-time employment 
+and arthritis in our sample.
+
+
