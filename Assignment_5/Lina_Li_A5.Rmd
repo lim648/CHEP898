@@ -26,11 +26,16 @@ library(cobalt)
 library(cowplot)
 library(geepack)
 library(WeightIt)
+library(gridExtra)
+library(patchwork)
 ```
 
 # Assignment Introduction
 
-**Assignment Goal:** Work with the Can Path Student Dataset to perform a Machine Learning-based Matching Analysis. This assignment will require student to apply a machine learning approach to match cases and controls (or equivalent groups), analyze the quality of the matches, and interpret the results.
+**Assignment Goal:** Work with the Can Path Student Dataset to perform a Machine 
+Learning-based Matching Analysis. This assignment will require student to apply 
+a machine learning approach to match cases and controls (or equivalent groups), 
+analyze the quality of the matches, and interpret the results.
 
 
 **Assignment Objectives:**
@@ -63,9 +68,9 @@ data$ID <- NULL
 data$ADM_STUDY_ID <- NULL
 ```
 
-## Prepar Data
+## Preparing the Data
 
-### Arthritis
+### Arthritis Data
 
 Arthritis = 0 (No Arthritis ever), Arthritis = 1 (Yes Arthritis ever)
 
@@ -87,7 +92,7 @@ data$DIS_ARTHRITIS_EVER <- NULL
 
 ### Full_time Data
 
-full_time = 0 (Not full-time employed/self-employed)
+full_time = 0 (Not full-time employed/self-employed),
 
 full_time = 1 (Yes full-time employed/self-employed)
 
@@ -126,49 +131,72 @@ lr <- glm(arthritis ~ full_time, data = data, family = "binomial")
 tab_model(lr)
 ```
 
-The naive analysis suggests that individuals who are employed full-time have 0.514 times the odds of having arthritis compared to those who do not work full-time.
+
+**Finding:** The naive analysis suggests that individuals who are employed full-time 
+have **0.51** times the odds of having arthritis compared to those who do not work full-time.
 
 ## Define Closeness
 
-Define variables are associated with the treatment (Full time employed) in order to create a model that can help us define what causes treatment. General rule we want to include more variables than less in our propensity score.
+Define variables are associated with the treatment (Full time employed) in order 
+to create a model that can help us define what causes treatment. General rule we 
+want to include more variables than less in our propensity score. 
 
-- __WRK_PART_TIME__: Indicator of whether the participant is currently employed part-time (paid employment or self-employed). Part time means less than 30 houurs per week
+- __WRK_PART_TIME__: Indicator of whether the participant is currently employed 
+part-time (paid employment or self-employed). Part time means less than 30 houurs per week
 
 - __WRK_STUDENT__: Indicator of whether the participant is currently a student.
 
-- __WRK_EMPLOYMENT__: Indicator of whether the participant currently has paid employment or is self-employed (including full-time and part time status).
+- __WRK_EMPLOYMENT__: Indicator of whether the participant currently has paid employment 
+or is self-employed (including full-time and part time status).
 
 - __SDC_GENDER__: Gender of the participant.
 
 - __SDC_EDU_LEVEL__: Highest level of education completed by the participant.
 
-- __SDC_INCOME__: Average annual income, before taxes, of the participant's entire household including salaries, pensions, and allowances.
+- __SDC_INCOME__: Average annual income, before taxes, of the participant's entire 
+household including salaries, pensions, and allowances.
 
-- __HS_DENTAL_VISIT_EVER__: Indicator of whether the participant has ever had a dental professional visit.
+- __HS_DENTAL_VISIT_EVER__: Indicator of whether the participant has ever had a 
+dental professional visit.
 
-- __DIS_DIAB_EVER__: Occurrence of diabetes at any point during the life of the participant.
+- __DIS_DIAB_EVER__: Occurrence of diabetes at any point during the life of the 
+participant.
 
-- __DIS_CANCER_EVER__: Occurrence of cancer at any point during the life of the participant.
+- __DIS_CANCER_EVER__: Occurrence of cancer at any point during the life of the 
+participant.
 
-- __DIS_DEP_EVER__: Occurrence of major depression at any point during the life of the participant.
+- __DIS_DEP_EVER__: Occurrence of major depression at any point during the life 
+of the participant.
 
-- __PA_TOTAL_SHORT__: Quantitative indicator of global physical activity in metabolic equivalent (MET)-minutes per week (IPAQ short form).Total physical activity MET-minutes/week = sum of Walking + Moderate + Vigorous MET-minutes/week scores.
+- __SMK_CIG_EVER__: Indicator of whether the participant has ever smoked at least 
+100 cigarettes during his lifetime.
 
-- __SMK_CIG_EVER__: Indicator of whether the participant has ever smoked at least 100 cigarettes during his lifetime.
+- __SDC_HOUSEHOLD_ADULTS_NB__: Number of adults (age 18 or older) currently living 
+in the same household including the participant.
 
-- __SDC_HOUSEHOLD_ADULTS_NB__: Number of adults (age 18 or older) currently living in the same household including the participant.
+- __SDC_HOUSEHOLD_CHILDREN_NB__: Number of children (under 18 years of age) currently 
+living in the participant's household.
 
-- __SDC_HOUSEHOLD_CHILDREN_NB__: Number of children (under 18 years of age) currently living in the participant's household.
-
-- __PM_BMI_SR__: Weight (in kg) divided by height (in m) squared.
-
+I have chosen the above variables because __WRK_PART_TIME__, __WRK_STUDENT__, 
+and __WRK_EMPLOYMENT__ are direct indicators of work status and help model the 
+propensity to work full-time. __SDC_EDU_LEVEL__ and __SDC_INCOME__ are socioeconomic 
+indicators that likely influence job type and the ability to work full-time. 
+__SDC_GENDER__ is known to influence employment patterns. __SDC_HOUSEHOLD_ADULTS_NB__
+and __SDC_HOUSEHOLD_CHILDREN_NB__ may influence work hours, caregiving burden, and 
+employment choices. __DIS_DEP_EVER__, __DIS_CANCER_EVER__, and __DIS_DIAB_EVER__ are 
+chronic conditions that can affect a person’s ability or choice to work full-time, 
+and are also related to inflammation or immune function, which is biologically linked 
+to arthritis. __HS_DENTAL_VISIT_EVER__ is a proxy for access to care and possibly 
+general health engagement.
 
 ### Summary statistics of baseline variables by treatment status
 
 ```{r}
-covariates <- select(data, WRK_PART_TIME,WRK_EMPLOYMENT, WRK_STUDENT, SDC_INCOME, SDC_EDU_LEVEL, SDC_GENDER,HS_DENTAL_VISIT_EVER, DIS_DIAB_EVER,DIS_CANCER_EVER, DIS_DEP_EVER,PA_TOTAL_SHORT,SMK_CIG_EVER, SDC_HOUSEHOLD_ADULTS_NB,SDC_HOUSEHOLD_CHILDREN_NB  )
+covariates <- select(data, WRK_PART_TIME,WRK_EMPLOYMENT, WRK_STUDENT, SDC_INCOME, 
+                     SDC_EDU_LEVEL, SDC_GENDER,HS_DENTAL_VISIT_EVER, 
+                     DIS_DIAB_EVER,DIS_CANCER_EVER, DIS_DEP_EVER,SMK_CIG_EVER, 
+                     SDC_HOUSEHOLD_ADULTS_NB,SDC_HOUSEHOLD_CHILDREN_NB  )
 baselines <- colnames(covariates)
-baselines
 
 tab_baseline <- CreateTableOne(vars = baselines,
                        data = data, 
@@ -180,59 +208,292 @@ tab_baseline <- CreateTableOne(vars = baselines,
 kableone(tab_baseline, smd = TRUE, showAllLevels = FALSE )
 ```
 
+
+**Key Finding:** The baseline characteristics table summarizes differences between 
+participants who work full-time and those who do not, across a range of observed 
+covariates. Several variables show substantial imbalance, as indicated by large 
+SMD values, such as __WRK_EMPLOYMENT__ (SMD = 1.283), __WRK_PART_TIME__ (0.869), and 
+__SDC_INCOME__ (0.453; e.g., levels 1, 2, 3, 6, 7, 8), reflecting expected differences 
+in employment status and socioeconomic factors. Additional imbalances are observed 
+in __SDC_HOUSEHOLD_CHILDREN_NB__ (0.344; e.g., levels 0 to 3) and __DIS_CANCER_EVER__ (0.203), 
+indicating that individuals working full-time may differ significantly in household 
+structure and health history. Moderate imbalance is also present in variables such 
+as __SDC_EDU_LEVEL__ (e.g., levels 1, 2, 6), __SDC_GENDER__, __DIS_DIAB_EVER__, 
+and __SMK_CIG_EVER__, while other variables such as __WRK_STUDENT__ and __HS_DENTAL_VISIT_EVER__
+appear more balanced. Overall, the observed imbalances confirm the need for propensity score 
+matching or adjustment to achieve covariate balance and reduce bias before estimating 
+the effect of full-time employment on arthritis
+
+
 ## Naive Regression
 
-If we were not doing matching we would adjust the treatment variable & covariates as in a typical regression analysis. 
+If we were not doing matching we would adjust the treatment variable and 
+covariates as in a typical regression analysis. 
 
 ```{r}
-fit_naive <- glm(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + DIS_DEP_EVER + PA_TOTAL_SHORT + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + SDC_HOUSEHOLD_CHILDREN_NB, family = "binomial", data = data)
+fit_naive <- glm(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + 
+                   WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + 
+                   HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + 
+                   DIS_DEP_EVER + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + 
+                   SDC_HOUSEHOLD_CHILDREN_NB, 
+                 family = "binomial", 
+                 data = data)
 
-tab_model(fit_naive)
+# tab_model(fit_naive) #results show at the last section
 ```
 
 ## Matching Nearest Neighbour
 
 ```{r}
-kkn_1_1 <- matchit(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + DIS_DEP_EVER + PA_TOTAL_SHORT + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + SDC_HOUSEHOLD_CHILDREN_NB, data = data,
-               method = "nearest",
-               distance = "glm")
-summary(kkn_1_1, un = FALSE)
+kkn_1_1 <- matchit(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + 
+                     WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + 
+                     HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + 
+                     DIS_DEP_EVER + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + 
+                     SDC_HOUSEHOLD_CHILDREN_NB, 
+                   data = data, 
+                   method = "nearest",
+                   distance = "glm")
 
+summary(kkn_1_1, un = FALSE)
 ```
+
+**Finding:** Here we have a 1:1 match with 10301 treated (full_time) matched to 
+the same number of no full_time based on the variables we think are associated 
+with the treatment. We can see that the SMD is much better for the matched data 
+compared to the treatment/control comparison we did previously.
+
+### Histogram of the propensity score
 
 ```{r}
 knn_data <- match.data(kkn_1_1)
+
+ggplot(data = knn_data, aes(x = distance, fill = as.factor(full_time))) +
+  geom_histogram(binwidth = 0.02, position = "identity", alpha = 0.5) +
+  labs(x = "Propensity Score", fill = "Full-Time") +
+  theme_minimal()
 ```
 
-### Histogram of the propensity score
+**Finding:**
+
+- Different distributions:\
+   - The full-time group tends to have lower propensity scores, mostly clustering 
+   between 0.1 and 0.4.
+   - The pink group (non-full-time workers) has scores spread more toward the right, 
+   especially in the 0.25 to 0.55 range.
+
+- Overlap exists:\
+   - There is considerable overlap between the two groups in the 0.15 to 0.4 range.\
+   - his is important because it indicates common support, meaning there's a region 
+   where both groups have similar scores — and thus can be fairly compared after matching.
+
+
 ```{r}
-ggplot(data = knn_data, aes(distance)) + 
+plot(kkn_1_1, type = "jitter", interactive = FALSE)
+```
+
+**Finding:** 
+
+- The two distributions (matched treated vs. matched control) look very similar.
+
+- Some individuals from both the treated and control groups with very low or very 
+high propensity scores were not matched (you see this in the "unmatched" rows).
+
+- The plot shows that after matching, the distribution of propensity scores for 
+treated and control units is well-aligned, indicating that the matching procedure 
+effectively balanced the two groups.
+
+```{r}
+plot(kkn_1_1, type = "density", interactive = FALSE,
+     which.xs = ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + WRK_STUDENT + 
+       SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + HS_DENTAL_VISIT_EVER + 
+       DIS_DIAB_EVER + DIS_CANCER_EVER + DIS_DEP_EVER + SMK_CIG_EVER +  
+       SDC_HOUSEHOLD_ADULTS_NB + SDC_HOUSEHOLD_CHILDREN_NB)
+```
+**Finding:** Imbalances are represented by the differences between the black (treated) 
+and gray (control) distributions. We can see all the variables appear to have improved 
+balance after matching.
+
+## Generalized Full matching
+
+```{r}
+full <- matchit(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + 
+                  WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + 
+                  HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + 
+                  DIS_DEP_EVER + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + 
+                  SDC_HOUSEHOLD_CHILDREN_NB,
+                data = data,
+                method = "quick",
+                distance = "glm")
+
+
+summary(full, un = FALSE)
+
+full_data <- match.data(full)
+```
+
+**Finding:** Here we applied generalized full matching and successfully retained 
+all 10,301 treated individuals (full_time) while utilizing all 30,886 control 
+individuals (not full_time). However, through weighting, the ESS of the control 
+group was reduced to 10,459.82, making it more comparable to the treated group. 
+We can see that the SMD is much better for the matched data compared to the 
+treatment/control comparison we did previously. This suggests that the matching procedure 
+effectively reduced bias and created a more valid comparison for estimating the 
+effect of full-time employment on arthritis.
+
+### Histogram of Weights
+
+```{r}
+### Weights
+ggplot(data = full_data, aes(weights)) + 
         geom_histogram()
+
+summary(full_data$weights)
+
 ```
 
-```{r}
-head(kkn_1_1$match.matrix)
-```
+**Finding:** 
+
+- The majority of the weights are concentrated around 1, meaning most participants 
+contribute equally to the estimation.
+
+- A few individuals have very high weights (e.g., greater than 8 or even 20).
+
+- This kind of right-skewed distribution may raise concerns about extreme weights,
+which can increase the variance of estimates and reduce robustness.
+
+
+## Visualizing Matches: Comparing Two Matching Methods
 
 ```{r}
+
 love_knn <- love.plot(kkn_1_1, 
-          binary = "std", 
-          grid = TRUE,
-          thresholds = c(m = .1),
-          colors = c("red","blue"))  
+                binary = "std", 
+                grid = TRUE,
+                thresholds = c(m = .1),
+                colors = c("red","blue"))
 
-plot(love_knn)
+love_full <- love.plot(full, 
+                binary = "std", 
+                grid = TRUE,
+                thresholds = c(m = .1),
+                colors = c("red","blue"))
+
+plot_grid(love_full, love_knn, ncol = 1, nrow = 2, labels = c('Full', 'KNN'))
 ```
+
+**Finding for both Plot:** 
+
+- Before Matching (Red): \
+   - Many red dots fall outside the ±0.1 bounds, showing substantial imbalance 
+   between groups on several covariates.\
+   - This includes variables like __WRK_PART_TIME__, __WRK_EMPLOYMENT__, and 
+   __SDC_INCOME6/7__,which are highly imbalanced before matching.
+   
+- After Matching (Blue)
+   - All the blue dots are now within ±0.1, indicating that matching substantially 
+   improved covariate balance.
+
+- The distance variable
+   - This shows the propensity score itself is well-balanced (blue dot is near zero), 
+   which confirms the quality of the matching.
+   
 ```{r}
-bal.plot(kkn_1_1,
+p1 <- bal.plot(full,
          var.name="distance",
          which="both",
          type = "density",
          colors = c("red","blue"))
+
+p2 <- bal.plot(kkn_1_1,
+         var.name="distance",
+         which="both",
+         type = "density",
+         colors = c("red","blue"))
+
+
+(p1 + ggtitle("Full")) / 
+(p2 + ggtitle("KNN"))
+
+```
+
+**Finding for both Plot:**
+
+- Unadjusted Panels (Left side of both rows):\
+   - Noticeable separation between the red and blue curves.\
+   - This means that before matching, treated and control units had different 
+   distributions of propensity scores.
+   
+- Adjusted Panels (Right side of both rows):\
+   - The red and blue curves almost completely overlap in both Full and KNN methods.\
+   - This indicates that matching successfully balanced the distribution of propensity scores.\
+   - The Full method appears to have slightly better balance than KNN methods.
+
+
+## Analysis of the outcome and estimation of the treatment effect
+
+### Regression no covariates
+
+```{r}
+table(full_data$arthritis)
+
+full_data$arthritis <- as.numeric(full_data$arthritis)
+full_data <- full_data %>%
+	mutate(arthritis = case_when(
+		arthritis == 1 ~ 0,
+		arthritis == 2 ~ 1)) 
+```
+
+### GEE regresion 
+
+Why do we need to do a GEE regression in this context? What's happening with the 
+matches and what are we doing? 
+
+```{r}
+fit_no_cov <- geeglm(arthritis ~ full_time, family=binomial("log"), 
+              data=full_data,
+              weights=weights, ### Weights
+              std.err = 'san.se', ### Equivalent to robust standard errors 
+              id=subclass, #### Group by subclasses
+              corstr="independence") #### Specify correlation structure
+
+tab_model(fit_no_cov)
+```
+
+### Inverse probability of treatment weighting (IPTW)
+
+```{r}
+IPTW <- weightit(arthritis ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + 
+                   WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + 
+                   HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + 
+                   DIS_DEP_EVER + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + 
+                   SDC_HOUSEHOLD_CHILDREN_NB,
+                 data = data,
+                 method = "glm", #using the default logistic regression;
+                 stabilize = TRUE,
+                 estimand = "ATE")
+
+summary(IPTW)
 ```
 
 ```{r}
-plot(kkn_1_1, type = "density", interactive = FALSE,
-     which.xs = ~ full_time + WRK_PART_TIME + WRK_EMPLOYMENT + WRK_STUDENT + SDC_INCOME + SDC_EDU_LEVEL + SDC_GENDER + HS_DENTAL_VISIT_EVER + DIS_DIAB_EVER + DIS_CANCER_EVER + DIS_DEP_EVER + PA_TOTAL_SHORT + SMK_CIG_EVER +  SDC_HOUSEHOLD_ADULTS_NB + SDC_HOUSEHOLD_CHILDREN_NB)
+bal.plot(IPTW,
+         which="both",
+         type = "density",
+         colors = c("red","blue"))
+```
+```{r}
+bal.tab(IPTW, un=TRUE, thresholds = c(m=0.1))
 ```
 
+```{r}
+model_iptw <- glm_weightit(arthritis ~ full_time, 
+            family = "binomial",
+            weightit = IPTW,
+            data = data)
+```
+
+## All models together
+
+```{r}
+tab_model(fit_naive, fit_no_cov, model_iptw)
+```
